@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CustomerType;
 use App\Enums\Status;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -36,6 +37,20 @@ class Company extends Model
         return [
             'status' => Status::class,
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Every company must have exactly one "Público general" customer,
+        // used as the POS default when no specific customer is selected.
+        static::created(function (Company $company) {
+            Customer::query()->create([
+                'company_id' => $company->id,
+                'customer_type' => CustomerType::GeneralPublic,
+                'name' => 'Público general',
+                'status' => Status::Active,
+            ]);
+        });
     }
 
     /** @return HasMany<Branch, $this> */

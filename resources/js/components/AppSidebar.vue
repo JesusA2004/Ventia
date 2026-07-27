@@ -12,11 +12,14 @@ import {
     PackageSearch,
     Percent,
     Receipt,
+    ReceiptText,
     Shield,
     ShoppingBag,
+    ShoppingCart,
     SlidersHorizontal,
     Tags,
     Users,
+    Wallet,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -33,19 +36,24 @@ import {
 } from '@/components/ui/sidebar';
 import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
+import cash from '@/routes/cash';
 import { index as brandsIndex } from '@/routes/catalog/brands';
 import { index as categoriesIndex } from '@/routes/catalog/categories';
 import { index as priceListsIndex } from '@/routes/catalog/price-lists';
 import { index as taxesIndex } from '@/routes/catalog/taxes';
 import { index as unitsIndex } from '@/routes/catalog/units';
+import { index as customersIndex } from '@/routes/customers';
 import { create as adjustmentsCreate } from '@/routes/inventory/adjustments';
 import { index as balancesIndex } from '@/routes/inventory/balances';
 import { index as countsIndex } from '@/routes/inventory/counts';
 import { index as kardexIndex } from '@/routes/inventory/kardex';
 import { index as lotsIndex } from '@/routes/inventory/lots';
 import { index as transfersIndex } from '@/routes/inventory/transfers';
+import { index as paymentMethodsIndex } from '@/routes/payment-methods';
+import { index as posIndex } from '@/routes/pos';
 import { index as productsIndex } from '@/routes/products';
 import { index as rolesIndex } from '@/routes/roles';
+import salesRoutes from '@/routes/sales';
 import { index as branchesIndex } from '@/routes/settings/branches';
 import { edit as companyEdit } from '@/routes/settings/company';
 import { index as registersIndex } from '@/routes/settings/registers';
@@ -55,13 +63,73 @@ import type { NavItem } from '@/types';
 
 const { can } = usePermissions();
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
+const mainNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+    ];
+
+    if (can('pos.access')) {
+        items.push({
+            title: 'Punto de venta',
+            href: posIndex(),
+            icon: ShoppingCart,
+        });
+    }
+
+    return items;
+});
+
+const salesNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [];
+
+    if (can('sales.view')) {
+        items.push({
+            title: 'Historial de ventas',
+            href: salesRoutes.index(),
+            icon: ReceiptText,
+        });
+    }
+
+    if (can('customers.view')) {
+        items.push({ title: 'Clientes', href: customersIndex(), icon: Users });
+    }
+
+    if (can('payment-methods.manage')) {
+        items.push({
+            title: 'Métodos de pago',
+            href: paymentMethodsIndex(),
+            icon: CreditCard,
+        });
+    }
+
+    return items;
+});
+
+const cashNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [];
+
+    if (can('cash.open')) {
+        items.push({
+            title: 'Abrir caja',
+            href: cash.sessions.create(),
+            icon: Wallet,
+        });
+    }
+
+    if (can('cash.view') || can('cash.open')) {
+        items.push({
+            title: 'Sesiones de caja',
+            href: cash.sessions.index(),
+            icon: Wallet,
+        });
+    }
+
+    return items;
+});
 
 const catalogNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [];
@@ -226,6 +294,16 @@ const adminNavItems = computed<NavItem[]>(() => {
 
         <SidebarContent>
             <NavMain :items="mainNavItems" label="Principal" />
+            <NavMain
+                v-if="cashNavItems.length > 0"
+                :items="cashNavItems"
+                label="Caja"
+            />
+            <NavMain
+                v-if="salesNavItems.length > 0"
+                :items="salesNavItems"
+                label="Ventas"
+            />
             <NavMain
                 v-if="catalogNavItems.length > 0"
                 :items="catalogNavItems"

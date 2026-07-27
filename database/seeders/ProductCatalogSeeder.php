@@ -299,5 +299,8 @@ class ProductCatalogSeeder extends Seeder
             'reason' => 'Inventario inicial (seeder demo)',
             'performed_by' => $admin->id,
         ]);
+
+        // Mark a few best-sellers as POS favorites for the initial grid.
+        Product::query()->whereIn('id', [$soda->id, $rice->id, $shirt->id])->update(['is_favorite' => true]);
     }
 }

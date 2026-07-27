@@ -130,6 +130,7 @@ export type Product = {
     unit_id: number;
     unit_name?: string;
     unit_symbol?: string;
+    allows_fraction?: boolean;
     tax_id: number | null;
     tax_name?: string | null;
     tax_rate?: string | null;

@@ -25,6 +25,7 @@ class ProductResource extends JsonResource
             'unit_id' => $this->unit_id,
             'unit_name' => $this->whenLoaded('unit', fn () => $this->unit?->name),
             'unit_symbol' => $this->whenLoaded('unit', fn () => $this->unit?->symbol),
+            'allows_fraction' => $this->whenLoaded('unit', fn () => $this->unit->allows_fraction),
             'tax_id' => $this->tax_id,
             'tax_name' => $this->whenLoaded('tax', fn () => $this->tax?->name),
             'tax_rate' => $this->whenLoaded('tax', fn () => $this->tax?->rate),
