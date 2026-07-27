@@ -143,7 +143,9 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Registration is intentionally disabled: Ventia accounts are only
+        // created by an administrator via the Users module, never
+        // self-service. Do not re-enable Features::registration() here.
         Features::resetPasswords(),
     ],
 

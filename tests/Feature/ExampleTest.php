@@ -1,7 +1,7 @@
 <?php
 
-test('returns a successful response', function () {
+test('the root route redirects instead of rendering a page', function () {
     $response = $this->get(route('home'));
 
-    $response->assertOk();
+    $response->assertRedirect();
 });
