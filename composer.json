@@ -1,11 +1,14 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/vue-starter-kit",
+    "name": "ventia/pos",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Ventia: sistema POS modular y multiempresa (Laravel 13 + Inertia + Vue 3) para abarrotes, farmacias, pastelerías, ferreterías, tiendas de ropa y comercio minorista en general.",
     "keywords": [
+        "pos",
+        "point-of-sale",
         "laravel",
-        "framework"
+        "inertia",
+        "vue"
     ],
     "license": "MIT",
     "require": {
@@ -89,7 +92,6 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi",
-            "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
             "@php artisan migrate --graceful --ansi"
         ],
         "pre-package-uninstall": [
