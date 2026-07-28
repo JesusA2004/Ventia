@@ -13,6 +13,7 @@ use App\Models\Sale;
 use App\Models\SalePayment;
 use App\Models\SaleReturn;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Carbon;
@@ -99,7 +100,7 @@ class ReportController extends Controller
         ]);
     }
 
-    /** @return array{0: Carbon, 1: Carbon} */
+    /** @return array{0: CarbonInterface, 1: CarbonInterface} */
     private function resolveDateRange(Request $request): array
     {
         $from = $request->date('date_from') ?? Carbon::today()->startOfMonth();
@@ -111,7 +112,7 @@ class ReportController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function summaryData(User $user, Carbon $from, Carbon $to, ?int $branchId): array
+    private function summaryData(User $user, CarbonInterface $from, CarbonInterface $to, ?int $branchId): array
     {
         $sales = Sale::query()->accessibleBy($user)
             ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
@@ -160,7 +161,7 @@ class ReportController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function salesData(User $user, Carbon $from, Carbon $to, ?int $branchId): array
+    private function salesData(User $user, CarbonInterface $from, CarbonInterface $to, ?int $branchId): array
     {
         $base = fn () => Sale::query()->accessibleBy($user)
             ->when($branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
@@ -204,7 +205,7 @@ class ReportController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function cashData(User $user, Carbon $from, Carbon $to, ?int $branchId): array
+    private function cashData(User $user, CarbonInterface $from, CarbonInterface $to, ?int $branchId): array
     {
         $sessionsWithDifferences = CashSession::query()->accessibleBy($user)
             ->with(['register:id,name', 'user:id,name'])

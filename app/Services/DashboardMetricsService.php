@@ -12,8 +12,8 @@ use App\Models\ProductLot;
 use App\Models\Sale;
 use App\Models\SaleReturn;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -30,7 +30,7 @@ class DashboardMetricsService
      * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
      * @return array<string, mixed>
      */
-    public function build(User $user, Carbon $from, Carbon $to, array $filters, string $granularity = 'day'): array
+    public function build(User $user, CarbonInterface $from, CarbonInterface $to, array $filters, string $granularity = 'day'): array
     {
         $current = $this->periodTotals($user, $from, $to, $filters);
 
@@ -86,7 +86,7 @@ class DashboardMetricsService
      * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
      * @return array<string, float|int>
      */
-    private function periodTotals(User $user, Carbon $from, Carbon $to, array $filters): array
+    private function periodTotals(User $user, CarbonInterface $from, CarbonInterface $to, array $filters): array
     {
         $sales = $this->salesQuery($user, $from, $to, $filters)->where('sales.status', SaleStatus::Completed);
 
@@ -139,7 +139,7 @@ class DashboardMetricsService
      * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
      * @return Builder<Sale>
      */
-    private function salesQuery(User $user, Carbon $from, Carbon $to, array $filters, string $dateColumn = 'completed_at'): Builder
+    private function salesQuery(User $user, CarbonInterface $from, CarbonInterface $to, array $filters, string $dateColumn = 'completed_at'): Builder
     {
         return Sale::query()->accessibleBy($user)
             ->when($filters['branch_id'], fn ($q, $id) => $q->where('sales.branch_id', $id))
@@ -165,7 +165,7 @@ class DashboardMetricsService
      * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
      * @return list<array{date: string, total: string, tickets: int}>
      */
-    private function salesOverTime(User $user, Carbon $from, Carbon $to, array $filters, string $granularity): array
+    private function salesOverTime(User $user, CarbonInterface $from, CarbonInterface $to, array $filters, string $granularity): array
     {
         // "Por hora" over a long range would generate thousands of buckets
         // for no readable benefit — fall back to daily once the range is
@@ -210,7 +210,7 @@ class DashboardMetricsService
         return $result;
     }
 
-    private function bucketKey(Carbon $moment, string $granularity): string
+    private function bucketKey(CarbonInterface $moment, string $granularity): string
     {
         return match ($granularity) {
             'hour' => $moment->format('Y-m-d H:00'),
@@ -243,7 +243,7 @@ class DashboardMetricsService
      * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
      * @return array<int, array{name: string, total: string}>
      */
-    private function salesByBranch(User $user, Carbon $from, Carbon $to, array $filters): array
+    private function salesByBranch(User $user, CarbonInterface $from, CarbonInterface $to, array $filters): array
     {
         return DB::table('branches')
             ->joinSub($this->salesQuery($user, $from, $to, $filters)->where('sales.status', SaleStatus::Completed), 's', 's.branch_id', '=', 'branches.id')
@@ -260,7 +260,7 @@ class DashboardMetricsService
      * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
      * @return array<int, array{method: string, total: string}>
      */
-    private function paymentMethodBreakdown(User $user, Carbon $from, Carbon $to, array $filters): array
+    private function paymentMethodBreakdown(User $user, CarbonInterface $from, CarbonInterface $to, array $filters): array
     {
         return DB::table('sale_payments')
             ->joinSub($this->salesQuery($user, $from, $to, $filters)->where('sales.status', SaleStatus::Completed), 's', 's.id', '=', 'sale_payments.sale_id')
@@ -277,7 +277,7 @@ class DashboardMetricsService
      * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
      * @return array<int, array{name: string, quantity: string}>
      */
-    private function topProducts(User $user, Carbon $from, Carbon $to, array $filters): array
+    private function topProducts(User $user, CarbonInterface $from, CarbonInterface $to, array $filters): array
     {
         return DB::table('sale_items')
             ->joinSub($this->salesQuery($user, $from, $to, $filters)->where('sales.status', SaleStatus::Completed), 's', 's.id', '=', 'sale_items.sale_id')
@@ -295,7 +295,7 @@ class DashboardMetricsService
      * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
      * @return array<int, array{name: string, total: string}>
      */
-    private function topCategories(User $user, Carbon $from, Carbon $to, array $filters): array
+    private function topCategories(User $user, CarbonInterface $from, CarbonInterface $to, array $filters): array
     {
         return DB::table('sale_items')
             ->joinSub($this->salesQuery($user, $from, $to, $filters)->where('sales.status', SaleStatus::Completed), 's', 's.id', '=', 'sale_items.sale_id')

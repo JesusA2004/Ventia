@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\CashRegister;
 use App\Models\User;
 use App\Services\DashboardMetricsService;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -59,8 +60,18 @@ class DashboardController extends Controller
         ]);
     }
 
-    /** @return array{0: Carbon, 1: Carbon} */
-    private function resolveRange(string $preset, ?Carbon $customFrom, ?Carbon $customTo): array
+    /**
+     * $customFrom/$customTo come from Request::date(), which resolves
+     * through the Date facade — and this app calls Date::use(CarbonImmutable::class)
+     * in AppServiceProvider, so these arrive as CarbonImmutable, not
+     * Illuminate\Support\Carbon. $today (built from Carbon::today(), a
+     * direct static call that bypasses the Date factory) stays mutable, so
+     * the two are mixed on purpose here — CarbonInterface is the only type
+     * both can satisfy.
+     *
+     * @return array{0: CarbonInterface, 1: CarbonInterface}
+     */
+    private function resolveRange(string $preset, ?CarbonInterface $customFrom, ?CarbonInterface $customTo): array
     {
         $today = Carbon::today();
 
