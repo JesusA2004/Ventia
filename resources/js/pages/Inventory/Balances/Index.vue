@@ -74,16 +74,20 @@ function filterBy(key: 'warehouse_id' | 'low_stock', value: string | boolean) {
             />
 
             <Select
-                :model-value="filters.warehouse_id ?? ''"
+                :model-value="filters.warehouse_id ?? 'all'"
                 @update:model-value="
-                    (v) => filterBy('warehouse_id', String(v ?? ''))
+                    (v) =>
+                        filterBy(
+                            'warehouse_id',
+                            v === 'all' ? '' : String(v ?? ''),
+                        )
                 "
             >
                 <SelectTrigger class="w-56">
                     <SelectValue placeholder="Todos los almacenes" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="">Todos los almacenes</SelectItem>
+                    <SelectItem value="all">Todos los almacenes</SelectItem>
                     <SelectItem
                         v-for="option in warehouseOptions"
                         :key="option.id"

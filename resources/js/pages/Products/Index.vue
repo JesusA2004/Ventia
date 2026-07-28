@@ -110,16 +110,20 @@ function filterBy(key: 'category_id' | 'brand_id' | 'status', value: string) {
             />
 
             <Select
-                :model-value="filters.category_id ?? ''"
+                :model-value="filters.category_id ?? 'all'"
                 @update:model-value="
-                    (v) => filterBy('category_id', String(v ?? ''))
+                    (v) =>
+                        filterBy(
+                            'category_id',
+                            v === 'all' ? '' : String(v ?? ''),
+                        )
                 "
             >
                 <SelectTrigger class="w-48">
                     <SelectValue placeholder="Todas las categorías" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="">Todas las categorías</SelectItem>
+                    <SelectItem value="all">Todas las categorías</SelectItem>
                     <SelectItem
                         v-for="option in categoryOptions"
                         :key="option.id"
@@ -131,14 +135,17 @@ function filterBy(key: 'category_id' | 'brand_id' | 'status', value: string) {
             </Select>
 
             <Select
-                :model-value="filters.status ?? ''"
-                @update:model-value="(v) => filterBy('status', String(v ?? ''))"
+                :model-value="filters.status ?? 'all'"
+                @update:model-value="
+                    (v) =>
+                        filterBy('status', v === 'all' ? '' : String(v ?? ''))
+                "
             >
                 <SelectTrigger class="w-40">
                     <SelectValue placeholder="Todos los estados" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="">Todos los estados</SelectItem>
+                    <SelectItem value="all">Todos los estados</SelectItem>
                     <SelectItem value="active">Activo</SelectItem>
                     <SelectItem value="inactive">Inactivo</SelectItem>
                 </SelectContent>

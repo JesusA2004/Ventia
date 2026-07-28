@@ -66,14 +66,16 @@ function filterByStatus(value: string) {
         </PageHeader>
 
         <Select
-            :model-value="filters.status ?? ''"
-            @update:model-value="(v) => filterByStatus(String(v ?? ''))"
+            :model-value="filters.status ?? 'all'"
+            @update:model-value="
+                (v) => filterByStatus(v === 'all' ? '' : String(v ?? ''))
+            "
         >
             <SelectTrigger class="w-56">
                 <SelectValue placeholder="Todos los estados" />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="">Todos los estados</SelectItem>
+                <SelectItem value="all">Todos los estados</SelectItem>
                 <SelectItem value="counting">Contando</SelectItem>
                 <SelectItem value="completed">Completado</SelectItem>
                 <SelectItem value="applied">Aplicado</SelectItem>

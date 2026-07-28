@@ -216,7 +216,7 @@ const horizontalBarOptions = { ...chartOptions, indexAxis: 'y' as const };
 <template>
     <Head title="Dashboard" />
 
-    <div class="flex flex-col gap-6 p-4">
+    <div class="flex flex-col gap-6">
         <DashboardFilters
             :filters="filters"
             :branch-options="branchOptions"

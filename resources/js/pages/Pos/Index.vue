@@ -242,7 +242,7 @@ function applyGeneralDiscount() {
     <Head title="Punto de venta" />
 
     <div
-        class="grid h-[calc(100vh-8rem)] grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]"
+        class="grid h-[calc(100vh-6rem)] grid-cols-1 gap-4 md:h-[calc(100vh-7rem)] lg:grid-cols-[1fr_380px]"
     >
         <div class="flex flex-col gap-3 overflow-hidden rounded-xl border p-4">
             <div class="flex items-center justify-between">
