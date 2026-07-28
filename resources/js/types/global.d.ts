@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { Company } from '@/types/models';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -19,6 +20,8 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            activeCompany: Company | null;
+            availableCompanies: Company[] | null;
             [key: string]: unknown;
         };
     }

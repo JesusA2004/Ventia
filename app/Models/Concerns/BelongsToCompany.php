@@ -4,7 +4,9 @@ namespace App\Models\Concerns;
 
 use App\Models\Company;
 use App\Models\Scopes\CompanyScope;
+use App\Services\ActiveCompanyContext;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -19,9 +21,15 @@ trait BelongsToCompany
         static::addGlobalScope(new CompanyScope);
 
         static::creating(function ($model) {
-            if (! $model->company_id && Auth::check()) {
-                $model->company_id = Auth::user()->company_id;
+            if ($model->company_id || ! Auth::check()) {
+                return;
             }
+
+            // Regular users always resolve to their own company; a
+            // superadmin (company_id === null) resolves to whichever
+            // company they've selected as active, so records they create
+            // are never silently orphaned with company_id = null.
+            $model->company_id = App::make(ActiveCompanyContext::class)->companyId();
         });
     }
 

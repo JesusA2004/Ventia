@@ -10,6 +10,11 @@ import StatusBadge from '@/components/StatusBadge.vue';
 import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index } from '@/routes/catalog/brands';
 import type { Brand, Paginated } from '@/types';
@@ -77,24 +82,34 @@ function destroy(brand: Brand) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Button
-                        v-if="can('brands.manage')"
-                        as-child
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <Link :href="BrandController.edit.url(row.id)">
-                            <PencilIcon />
-                        </Link>
-                    </Button>
+                    <Tooltip v-if="can('brands.manage')">
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Editar marca"
+                            >
+                                <Link :href="BrandController.edit.url(row.id)">
+                                    <PencilIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar marca</TooltipContent>
+                    </Tooltip>
                     <ConfirmationDialog
                         v-if="can('brands.manage')"
                         title="¿Eliminar marca?"
                         :description="`No podrás eliminar «${row.name}» si tiene productos relacionados.`"
+                        tooltip="Eliminar marca"
                         @confirm="destroy(row)"
                     >
                         <template #trigger>
-                            <Button size="icon" variant="ghost">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Eliminar marca"
+                            >
                                 <Trash2Icon />
                             </Button>
                         </template>

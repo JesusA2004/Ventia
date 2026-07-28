@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Sale;
 use App\Models\User;
+use App\Services\ActiveCompanyContext;
 use App\Services\Pricing\ProductPriceResolverService;
 use App\Services\Sales\CalculateSaleTotalsService;
 use App\Services\Sales\SaleFolioService;
@@ -31,6 +32,7 @@ class CreateSaleAction
         private readonly CalculateSaleTotalsService $totals,
         private readonly SaleFolioService $folios,
         private readonly SettingsService $settings,
+        private readonly ActiveCompanyContext $activeCompany,
     ) {}
 
     /**
@@ -48,7 +50,7 @@ class CreateSaleAction
     public function execute(array $data, User $cashier): Sale
     {
         return DB::transaction(function () use ($data, $cashier) {
-            $companyId = $cashier->company_id;
+            $companyId = $this->activeCompany->requireCompanyId();
             $customer = Customer::query()->whereKey($data['customer_id'])->firstOrFail();
 
             if ($customer->company_id !== $companyId) {

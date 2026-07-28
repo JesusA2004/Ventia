@@ -3,14 +3,17 @@
 namespace App\Http\Requests\Settings;
 
 use App\Enums\Status;
+use App\Services\ActiveCompanyContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateCompanyRequest extends FormRequest
 {
-    public function authorize(): bool
+    public function authorize(ActiveCompanyContext $activeCompany): bool
     {
-        return $this->user()->can('update', $this->route('company'));
+        $company = $activeCompany->company();
+
+        return $company !== null && $this->user()->can('update', $company);
     }
 
     /**

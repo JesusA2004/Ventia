@@ -10,6 +10,11 @@ import StatusBadge from '@/components/StatusBadge.vue';
 import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index } from '@/routes/catalog/price-lists';
 import type { Paginated, PriceList } from '@/types';
@@ -79,24 +84,36 @@ function destroy(priceList: PriceList) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Button
-                        v-if="can('price-lists.manage')"
-                        as-child
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <Link :href="PriceListController.edit.url(row.id)">
-                            <PencilIcon />
-                        </Link>
-                    </Button>
+                    <Tooltip v-if="can('price-lists.manage')">
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Editar lista de precios"
+                            >
+                                <Link
+                                    :href="PriceListController.edit.url(row.id)"
+                                >
+                                    <PencilIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar lista de precios</TooltipContent>
+                    </Tooltip>
                     <ConfirmationDialog
                         v-if="can('price-lists.manage')"
                         title="¿Eliminar lista de precios?"
                         :description="`No podrás eliminar «${row.name}» si tiene precios de producto asignados.`"
+                        tooltip="Eliminar lista de precios"
                         @confirm="destroy(row)"
                     >
                         <template #trigger>
-                            <Button size="icon" variant="ghost">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Eliminar lista de precios"
+                            >
                                 <Trash2Icon />
                             </Button>
                         </template>

@@ -8,6 +8,11 @@ import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index } from '@/routes/products/attributes';
 import type { ProductAttribute } from '@/types';
@@ -63,24 +68,39 @@ function destroy(attribute: ProductAttribute) {
                         attribute.name
                     }}</CardTitle>
                     <div class="flex gap-1">
-                        <Button as-child size="icon" variant="ghost">
-                            <Link
-                                :href="
-                                    ProductAttributeController.edit.url(
-                                        attribute.id,
-                                    )
-                                "
-                            >
-                                <PencilIcon />
-                            </Link>
-                        </Button>
+                        <Tooltip>
+                            <TooltipTrigger as-child>
+                                <Button
+                                    as-child
+                                    size="icon"
+                                    variant="ghost"
+                                    aria-label="Editar atributo"
+                                >
+                                    <Link
+                                        :href="
+                                            ProductAttributeController.edit.url(
+                                                attribute.id,
+                                            )
+                                        "
+                                    >
+                                        <PencilIcon />
+                                    </Link>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar atributo</TooltipContent>
+                        </Tooltip>
                         <ConfirmationDialog
                             title="¿Eliminar atributo?"
                             :description="`No podrás eliminar «${attribute.name}» si está en uso por alguna variante.`"
+                            tooltip="Eliminar atributo"
                             @confirm="destroy(attribute)"
                         >
                             <template #trigger>
-                                <Button size="icon" variant="ghost">
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    aria-label="Eliminar atributo"
+                                >
                                     <Trash2Icon />
                                 </Button>
                             </template>

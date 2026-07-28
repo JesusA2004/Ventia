@@ -4,7 +4,7 @@ use App\Http\Controllers\Pos\PosController;
 use App\Http\Controllers\Pos\SaleController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'active-company'])->group(function () {
     Route::get('pos', [PosController::class, 'index'])->name('pos.index');
     Route::get('pos/products/search', [PosController::class, 'searchProducts'])->name('pos.products.search');
     Route::get('pos/products/barcode', [PosController::class, 'lookupBarcode'])->name('pos.products.barcode');

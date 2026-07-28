@@ -27,7 +27,12 @@ class InventoryBalanceResource extends JsonResource
             'lot_number' => $this->whenLoaded('lot', fn () => $this->lot?->lot_number),
             'expiration_date' => $this->whenLoaded('lot', fn () => $this->lot?->expiration_date?->toDateString()),
             'quantity' => $this->quantity,
-            'average_cost' => $this->average_cost,
+            'unit_symbol' => $this->whenLoaded('product', fn () => $this->product->unit->symbol),
+            'unit_allows_fraction' => $this->whenLoaded('product', fn () => $this->product->unit->allows_fraction),
+            'average_cost' => $this->when(
+                $request->user()?->can('inventory.view-costs') ?? false,
+                $this->average_cost,
+            ),
             'minimum_stock' => $this->whenLoaded('product', fn () => $this->product->minimum_stock),
             'is_low_stock' => $this->whenLoaded('product', fn () => bccomp($this->quantity, $this->product->minimum_stock, 4) <= 0),
         ];

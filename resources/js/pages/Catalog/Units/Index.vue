@@ -16,6 +16,11 @@ import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index } from '@/routes/catalog/units';
 import type { Paginated, Unit } from '@/types';
@@ -90,24 +95,34 @@ function destroy(unit: Unit) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Button
-                        v-if="can('units.manage') && !row.is_global"
-                        as-child
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <Link :href="UnitController.edit.url(row.id)">
-                            <PencilIcon />
-                        </Link>
-                    </Button>
+                    <Tooltip v-if="can('units.manage') && !row.is_global">
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Editar unidad"
+                            >
+                                <Link :href="UnitController.edit.url(row.id)">
+                                    <PencilIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar unidad</TooltipContent>
+                    </Tooltip>
                     <ConfirmationDialog
                         v-if="can('units.manage') && !row.is_global"
                         title="¿Eliminar unidad?"
                         :description="`No podrás eliminar «${row.name}» si tiene productos relacionados.`"
+                        tooltip="Eliminar unidad"
                         @confirm="destroy(row)"
                     >
                         <template #trigger>
-                            <Button size="icon" variant="ghost">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Eliminar unidad"
+                            >
                                 <Trash2Icon />
                             </Button>
                         </template>

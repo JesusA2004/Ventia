@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\ActiveCompanyContext;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -17,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(ActiveCompanyContext::class);
     }
 
     /**
@@ -29,6 +31,16 @@ class AppServiceProvider extends ServiceProvider
 
         // Superadministrators (no company_id) bypass every permission check.
         Gate::before(fn (User $user, string $ability) => $user->isSuperAdmin() ? true : null);
+
+        // Inertia's PropsResolver treats every JsonResource as Responsable and
+        // calls toResponse() on it, which wraps single resources and
+        // collections in a "data" key by default. Every frontend type in
+        // this app assumes flat, unwrapped props (Category[], customer.name,
+        // etc.), so leaving the default wrap on silently produces undefined
+        // reads (e.g. "Historial de undefined"). PaginatedResource::make()
+        // builds its own {data, links, meta} shape by hand and is unaffected
+        // either way.
+        JsonResource::withoutWrapping();
     }
 
     /**

@@ -16,6 +16,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\ActiveCompanyContext;
 use App\Services\Sales\SalePaymentValidatorService;
 use App\Services\SettingsService;
 use App\Support\Decimal;
@@ -37,6 +38,7 @@ class CompleteSaleAction
         private readonly RecordInventoryMovementAction $recordMovement,
         private readonly RegisterCashMovementAction $recordCashMovement,
         private readonly SettingsService $settings,
+        private readonly ActiveCompanyContext $activeCompany,
     ) {}
 
     /**
@@ -64,7 +66,7 @@ class CompleteSaleAction
                 }
             }
 
-            $companyId = $cashier->company_id;
+            $companyId = $this->activeCompany->requireCompanyId();
             $warehouse = Warehouse::query()->whereKey($data['warehouse_id'])->firstOrFail();
 
             if ($warehouse->company_id !== $companyId) {

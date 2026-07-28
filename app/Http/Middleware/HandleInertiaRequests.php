@@ -2,7 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Status;
+use App\Http\Resources\CompanyResource;
 use App\Http\Resources\UserResource;
+use App\Models\Company;
+use App\Services\ActiveCompanyContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -36,13 +40,26 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $isSuperAdmin = $user?->isSuperAdmin() ?? false;
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user() ? UserResource::make($request->user())->resolve() : null,
+                'user' => $user ? UserResource::make($user)->resolve() : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'activeCompany' => $user
+                ? fn () => ($company = app(ActiveCompanyContext::class)->company()) !== null
+                    ? CompanyResource::make($company)
+                    : null
+                : null,
+            'availableCompanies' => $isSuperAdmin
+                ? fn () => CompanyResource::collection(
+                    Company::query()->where('status', Status::Active)->orderBy('name')->get()
+                )
+                : null,
         ];
     }
 }

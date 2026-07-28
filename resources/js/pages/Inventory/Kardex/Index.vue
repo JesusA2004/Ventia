@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { ClipboardListIcon, DownloadIcon } from '@lucide/vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ClipboardListIcon, DownloadIcon, PlusIcon } from '@lucide/vue';
 import { ref } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -17,6 +17,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { usePermissions } from '@/composables/usePermissions';
+import { create as createAdjustment } from '@/routes/inventory/adjustments';
 import { exportMethod as kardexExport, index } from '@/routes/inventory/kardex';
 import type {
     InventoryMovement,
@@ -39,6 +41,8 @@ const props = defineProps<{
     warehouseOptions: Warehouse[];
     productOptions: Product[];
 }>();
+
+const { can } = usePermissions();
 
 const selectedProductLabel = ref(props.productOptions[0]?.name ?? '');
 
@@ -80,13 +84,26 @@ function formatDate(value: string): string {
 </script>
 
 <template>
-    <Head title="Kardex" />
+    <Head title="Movimientos" />
 
     <div class="flex flex-col gap-6">
         <PageHeader
-            title="Kardex"
-            description="Historial de movimientos de un producto en un almacén."
-        />
+            title="Movimientos"
+            description="Historial de entradas y salidas de inventario: ventas, compras, transferencias y ajustes (entrada manual, salida manual, merma, daño, robo, caducidad, uso interno, corrección de conteo)."
+        >
+            <template #actions>
+                <Button
+                    v-if="can('inventory.adjust')"
+                    as-child
+                    variant="outline"
+                >
+                    <Link :href="createAdjustment()">
+                        <PlusIcon />
+                        Nuevo ajuste
+                    </Link>
+                </Button>
+            </template>
+        </PageHeader>
 
         <div class="flex flex-wrap items-end gap-3">
             <div class="w-80 space-y-1.5">

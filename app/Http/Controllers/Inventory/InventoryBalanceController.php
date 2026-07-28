@@ -24,7 +24,13 @@ class InventoryBalanceController extends Controller
     public function index(Request $request): Response
     {
         $balances = InventoryBalance::query()
-            ->with(['warehouse:id,name,branch_id', 'product:id,name,sku,minimum_stock', 'variant:id,sku', 'lot:id,lot_number,expiration_date'])
+            ->with([
+                'warehouse:id,name,branch_id',
+                'product:id,name,sku,minimum_stock,unit_id',
+                'product.unit:id,symbol,allows_fraction',
+                'variant:id,sku',
+                'lot:id,lot_number,expiration_date',
+            ])
             ->when($request->integer('warehouse_id'), fn ($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
             ->when($request->string('search')->toString(), fn ($query, $search) => $query->whereHas(
                 'product',

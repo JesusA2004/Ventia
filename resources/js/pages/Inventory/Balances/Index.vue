@@ -15,6 +15,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { usePermissions } from '@/composables/usePermissions';
+import { formatCurrency, formatQuantity } from '@/lib/format';
 import { index } from '@/routes/inventory/balances';
 import type { InventoryBalance, Paginated, Warehouse } from '@/types';
 
@@ -23,6 +25,8 @@ const props = defineProps<{
     filters: { search?: string; warehouse_id?: string; low_stock?: string };
     warehouseOptions: Warehouse[];
 }>();
+
+const { can } = usePermissions();
 
 defineOptions({
     layout: {
@@ -35,8 +39,11 @@ const columns: DataTableColumn[] = [
     { key: 'warehouse_name', label: 'Almacén' },
     { key: 'lot_number', label: 'Lote' },
     { key: 'quantity', label: 'Existencia' },
-    { key: 'average_cost', label: 'Costo promedio' },
-    { key: 'is_low_stock', label: '' },
+    { key: 'unit_symbol', label: 'Unidad' },
+    ...(can('inventory.view-costs')
+        ? [{ key: 'average_cost', label: 'Costo promedio' }]
+        : []),
+    { key: 'is_low_stock', label: 'Estado de stock' },
 ];
 
 function filterBy(key: 'warehouse_id' | 'low_stock', value: string | boolean) {
@@ -120,10 +127,30 @@ function filterBy(key: 'warehouse_id' | 'low_stock', value: string | boolean) {
             <template #cell-lot_number="{ row }">
                 {{ row.lot_number ?? '—' }}
             </template>
+            <template #cell-quantity="{ row }">
+                {{
+                    formatQuantity(
+                        row.quantity,
+                        row.unit_allows_fraction ?? true,
+                    )
+                }}
+            </template>
+            <template #cell-unit_symbol="{ row }">
+                {{ row.unit_symbol ?? '—' }}
+            </template>
+            <template #cell-average_cost="{ row }">
+                {{
+                    row.average_cost !== undefined
+                        ? formatCurrency(row.average_cost)
+                        : '—'
+                }}
+            </template>
             <template #cell-is_low_stock="{ row }">
-                <Badge v-if="row.is_low_stock" variant="destructive"
-                    >Stock bajo</Badge
+                <Badge
+                    :variant="row.is_low_stock ? 'destructive' : 'secondary'"
                 >
+                    {{ row.is_low_stock ? 'Stock bajo' : 'Stock suficiente' }}
+                </Badge>
             </template>
         </ServerDataTable>
     </div>

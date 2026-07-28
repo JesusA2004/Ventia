@@ -9,8 +9,10 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('settings/company', [CompanyController::class, 'edit'])->name('settings.company.edit');
-    Route::patch('settings/company', [CompanyController::class, 'update'])->name('settings.company.update');
+    Route::middleware('active-company')->group(function () {
+        Route::get('settings/company', [CompanyController::class, 'edit'])->name('settings.company.edit');
+        Route::patch('settings/company', [CompanyController::class, 'update'])->name('settings.company.update');
+    });
 
     Route::resource('settings/branches', BranchController::class)
         ->parameters(['branches' => 'branch'])

@@ -24,6 +24,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index } from '@/routes/products';
 import type { Brand, Category, Paginated, Product } from '@/types';
@@ -162,33 +167,49 @@ function filterBy(key: 'category_id' | 'brand_id' | 'status', value: string) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Button
-                        v-if="can('products.create')"
-                        size="icon"
-                        variant="ghost"
-                        title="Duplicar"
-                        @click="duplicate(row)"
-                    >
-                        <CopyIcon />
-                    </Button>
-                    <Button
-                        v-if="can('products.update')"
-                        as-child
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <Link :href="ProductController.edit.url(row.id)">
-                            <PencilIcon />
-                        </Link>
-                    </Button>
+                    <Tooltip v-if="can('products.create')">
+                        <TooltipTrigger as-child>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Duplicar producto"
+                                @click="duplicate(row)"
+                            >
+                                <CopyIcon />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Duplicar producto</TooltipContent>
+                    </Tooltip>
+                    <Tooltip v-if="can('products.update')">
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Editar producto"
+                            >
+                                <Link
+                                    :href="ProductController.edit.url(row.id)"
+                                >
+                                    <PencilIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar producto</TooltipContent>
+                    </Tooltip>
                     <ConfirmationDialog
                         v-if="can('products.delete')"
                         title="¿Eliminar producto?"
                         :description="`No podrás eliminar «${row.name}» si tiene movimientos de inventario históricos.`"
+                        tooltip="Eliminar producto"
                         @confirm="destroy(row)"
                     >
                         <template #trigger>
-                            <Button size="icon" variant="ghost">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Eliminar producto"
+                            >
                                 <Trash2Icon />
                             </Button>
                         </template>

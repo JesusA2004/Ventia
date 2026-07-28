@@ -9,11 +9,16 @@ import StatusBadge from '@/components/StatusBadge.vue';
 import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index } from '@/routes/payment-methods';
-import type { PaymentMethod, Paginated } from '@/types';
+import type { PaymentMethod } from '@/types';
 
-const props = defineProps<{
+defineProps<{
     paymentMethods: PaymentMethod[];
 }>();
 
@@ -32,19 +37,6 @@ const columns: DataTableColumn[] = [
     { key: 'status', label: 'Estado' },
     { key: 'actions', label: '', class: 'text-right' },
 ];
-
-const paginated: Paginated<PaymentMethod> = {
-    data: props.paymentMethods,
-    links: [],
-    meta: {
-        current_page: 1,
-        last_page: 1,
-        per_page: props.paymentMethods.length || 1,
-        total: props.paymentMethods.length,
-        from: props.paymentMethods.length ? 1 : null,
-        to: props.paymentMethods.length || null,
-    },
-};
 
 function destroy(paymentMethod: PaymentMethod) {
     router.delete(PaymentMethodController.destroy.url(paymentMethod.id), {
@@ -71,7 +63,7 @@ function destroy(paymentMethod: PaymentMethod) {
             </template>
         </PageHeader>
 
-        <ServerDataTable :columns="columns" :paginated="paginated">
+        <ServerDataTable :columns="columns" :rows="paymentMethods">
             <template #empty>
                 <EmptyState
                     :icon="CreditCardIcon"
@@ -87,24 +79,38 @@ function destroy(paymentMethod: PaymentMethod) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Button
-                        v-if="can('payment-methods.manage')"
-                        as-child
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <Link :href="PaymentMethodController.edit.url(row.id)">
-                            <PencilIcon />
-                        </Link>
-                    </Button>
+                    <Tooltip v-if="can('payment-methods.manage')">
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Editar método de pago"
+                            >
+                                <Link
+                                    :href="
+                                        PaymentMethodController.edit.url(row.id)
+                                    "
+                                >
+                                    <PencilIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar método de pago</TooltipContent>
+                    </Tooltip>
                     <ConfirmationDialog
                         v-if="can('payment-methods.manage')"
                         title="¿Eliminar método de pago?"
                         :description="`No podrás eliminar «${row.name}» si tiene ventas registradas.`"
+                        tooltip="Eliminar método de pago"
                         @confirm="destroy(row)"
                     >
                         <template #trigger>
-                            <Button size="icon" variant="ghost">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Eliminar método de pago"
+                            >
                                 <Trash2Icon />
                             </Button>
                         </template>

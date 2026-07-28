@@ -20,6 +20,7 @@ use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\Tax;
 use App\Models\Unit;
+use App\Services\ActiveCompanyContext;
 use App\Support\PaginatedResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -34,6 +35,7 @@ class ProductController extends Controller
         private readonly CreateProductAction $createProduct,
         private readonly UpdateProductAction $updateProduct,
         private readonly DuplicateProductAction $duplicateProduct,
+        private readonly ActiveCompanyContext $activeCompany,
     ) {
         $this->authorizeResource(Product::class, 'product');
     }
@@ -69,7 +71,7 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request): RedirectResponse
     {
-        $this->createProduct->execute($request->validated(), $request->user()->company_id);
+        $this->createProduct->execute($request->validated(), $this->activeCompany->requireCompanyId());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Producto creado correctamente.']);
 

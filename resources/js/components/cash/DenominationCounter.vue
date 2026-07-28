@@ -2,7 +2,7 @@
 import { computed, reactive } from 'vue';
 import { Input } from '@/components/ui/input';
 
-const DENOMINATIONS = [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1];
+const DENOMINATIONS = [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1, 0.5];
 
 const counts = reactive<Record<number, number>>(
     Object.fromEntries(DENOMINATIONS.map((d) => [d, 0])),
@@ -12,7 +12,15 @@ const total = computed(() =>
     DENOMINATIONS.reduce((sum, d) => sum + d * (counts[d] || 0), 0),
 );
 
-defineExpose({ total, counts });
+/** Non-zero denomination lines, in the shape the handover endpoint expects. */
+const lines = computed(() =>
+    DENOMINATIONS.filter((d) => (counts[d] || 0) > 0).map((d) => ({
+        denomination: d,
+        quantity: counts[d],
+    })),
+);
+
+defineExpose({ total, counts, lines });
 </script>
 
 <template>

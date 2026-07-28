@@ -23,6 +23,11 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { index } from '@/routes/inventory/transfers';
 import type { Product, ProductVariant, Warehouse } from '@/types';
 
@@ -166,14 +171,22 @@ function submit() {
                                     />
                                 </TableCell>
                                 <TableCell class="text-right">
-                                    <Button
-                                        type="button"
-                                        size="icon"
-                                        variant="ghost"
-                                        @click="removeItem(index)"
-                                    >
-                                        <Trash2Icon />
-                                    </Button>
+                                    <Tooltip>
+                                        <TooltipTrigger as-child>
+                                            <Button
+                                                type="button"
+                                                size="icon"
+                                                variant="ghost"
+                                                aria-label="Quitar producto"
+                                                @click="removeItem(index)"
+                                            >
+                                                <Trash2Icon />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                            >Quitar producto</TooltipContent
+                                        >
+                                    </Tooltip>
                                 </TableCell>
                             </TableRow>
                         </TableBody>

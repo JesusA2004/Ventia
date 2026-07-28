@@ -10,6 +10,11 @@ import StatusBadge from '@/components/StatusBadge.vue';
 import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index } from '@/routes/settings/registers';
 import type { CashRegister, Paginated } from '@/types';
@@ -82,24 +87,36 @@ function destroy(register: CashRegister) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Button
-                        v-if="can('registers.manage')"
-                        as-child
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <Link :href="RegisterController.edit.url(row.id)">
-                            <PencilIcon />
-                        </Link>
-                    </Button>
+                    <Tooltip v-if="can('registers.manage')">
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Editar caja"
+                            >
+                                <Link
+                                    :href="RegisterController.edit.url(row.id)"
+                                >
+                                    <PencilIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar caja</TooltipContent>
+                    </Tooltip>
                     <ConfirmationDialog
                         v-if="can('registers.manage')"
                         title="¿Eliminar caja?"
                         :description="`Esta acción eliminará «${row.name}» de forma reversible.`"
+                        tooltip="Eliminar caja"
                         @confirm="destroy(row)"
                     >
                         <template #trigger>
-                            <Button size="icon" variant="ghost">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Eliminar caja"
+                            >
                                 <Trash2Icon />
                             </Button>
                         </template>

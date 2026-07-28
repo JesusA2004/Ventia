@@ -20,5 +20,18 @@ return [
         'low_stock_default_threshold' => 5,
         'ticket_footer_message' => 'Gracias por su compra',
         'max_discount_percentage_without_authorization' => 10,
+        'cash_handover_required' => false,
+        'cash_handover_allow_self_approval' => false,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cash denominations
+    |--------------------------------------------------------------------------
+    |
+    | Fixed bill/coin values offered by the denominations counter when
+    | closing a cash session under the supervised handover flow.
+    |
+    */
+    'denominations' => [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1, 0.5],
 ];

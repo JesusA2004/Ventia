@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { PencilIcon, PlusIcon, Trash2Icon, UsersIcon } from '@lucide/vue';
+import {
+    HistoryIcon,
+    PencilIcon,
+    PlusIcon,
+    Trash2Icon,
+    UsersIcon,
+} from '@lucide/vue';
 import CustomerController from '@/actions/App/Http/Controllers/Sales/CustomerController';
 import ConfirmationDialog from '@/components/dialogs/ConfirmationDialog.vue';
 import EmptyState from '@/components/EmptyState.vue';
@@ -10,8 +16,13 @@ import StatusBadge from '@/components/StatusBadge.vue';
 import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
-import { create, index } from '@/routes/customers';
+import { create, index, salesHistory } from '@/routes/customers';
 import type { Customer, Paginated } from '@/types';
 
 const props = defineProps<{
@@ -81,29 +92,51 @@ function destroy(customer: Customer) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Button as-child size="icon" variant="ghost">
-                        <Link :href="`/customers/${row.id}/sales`">
-                            <UsersIcon />
-                        </Link>
-                    </Button>
-                    <Button
-                        v-if="can('customers.update')"
-                        as-child
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <Link :href="CustomerController.edit.url(row.id)">
-                            <PencilIcon />
-                        </Link>
-                    </Button>
+                    <Tooltip>
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Ver historial de ventas"
+                            >
+                                <Link :href="salesHistory(row.id)">
+                                    <HistoryIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Ver historial de ventas</TooltipContent>
+                    </Tooltip>
+                    <Tooltip v-if="can('customers.update')">
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Editar cliente"
+                            >
+                                <Link
+                                    :href="CustomerController.edit.url(row.id)"
+                                >
+                                    <PencilIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar cliente</TooltipContent>
+                    </Tooltip>
                     <ConfirmationDialog
                         v-if="can('customers.delete')"
                         title="¿Eliminar cliente?"
                         :description="`No podrás eliminar «${row.name}» si tiene ventas registradas.`"
+                        tooltip="Eliminar cliente"
                         @confirm="destroy(row)"
                     >
                         <template #trigger>
-                            <Button size="icon" variant="ghost">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Eliminar cliente"
+                            >
                                 <Trash2Icon />
                             </Button>
                         </template>

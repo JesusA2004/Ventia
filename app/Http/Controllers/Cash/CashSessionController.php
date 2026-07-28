@@ -19,6 +19,7 @@ use App\Http\Resources\CashSessionResource;
 use App\Models\CashRegister;
 use App\Models\CashSession;
 use App\Services\Cash\CashSessionSummaryService;
+use App\Services\SettingsService;
 use App\Support\PaginatedResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -132,9 +133,17 @@ class CashSessionController extends Controller
         ]);
     }
 
-    public function showCloseForm(CashSession $cashSession): Response
+    public function showCloseForm(CashSession $cashSession, SettingsService $settings): Response
     {
         $this->authorize('close', $cashSession);
+
+        if ((bool) ($settings->get($cashSession->company_id, 'cash_handover_required') ?? false)) {
+            return Inertia::render('Cash/RequestHandover', [
+                'session' => CashSessionResource::make($cashSession->load(['register:id,name', 'user:id,name'])),
+                'summary' => $this->summary->build($cashSession),
+                'denominationOptions' => config('pos.denominations'),
+            ]);
+        }
 
         return Inertia::render('Cash/Close', [
             'session' => CashSessionResource::make($cashSession->load(['register:id,name', 'user:id,name'])),
@@ -142,8 +151,10 @@ class CashSessionController extends Controller
         ]);
     }
 
-    public function close(CloseCashSessionRequest $request, CashSession $cashSession): RedirectResponse
+    public function close(CloseCashSessionRequest $request, CashSession $cashSession, SettingsService $settings): RedirectResponse
     {
+        abort_if((bool) ($settings->get($cashSession->company_id, 'cash_handover_required') ?? false), 403, 'Esta empresa requiere entrega de caja supervisada. Usa el flujo de entrega de caja.');
+
         try {
             $session = $this->closeSession->execute(
                 $cashSession,

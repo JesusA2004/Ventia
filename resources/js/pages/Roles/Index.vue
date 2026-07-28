@@ -14,6 +14,11 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { edit } from '@/routes/roles';
 import { index } from '@/routes/roles';
 import type { RoleSummary } from '@/types';
@@ -72,11 +77,23 @@ const columns: DataTableColumn[] = [
                             <Badge v-if="!role.editable" variant="outline"
                                 >Acceso total</Badge
                             >
-                            <Button v-else as-child size="icon" variant="ghost">
-                                <Link :href="edit(role.id)">
-                                    <PencilIcon />
-                                </Link>
-                            </Button>
+                            <Tooltip v-else>
+                                <TooltipTrigger as-child>
+                                    <Button
+                                        as-child
+                                        size="icon"
+                                        variant="ghost"
+                                        aria-label="Editar permisos del rol"
+                                    >
+                                        <Link :href="edit(role.id)">
+                                            <PencilIcon />
+                                        </Link>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                    >Editar permisos del rol</TooltipContent
+                                >
+                            </Tooltip>
                         </TableCell>
                     </TableRow>
                 </TableBody>

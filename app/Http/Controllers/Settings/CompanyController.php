@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\UpdateCompanyRequest;
 use App\Http\Resources\CompanyResource;
+use App\Services\ActiveCompanyContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,9 +13,11 @@ use Inertia\Response;
 
 class CompanyController extends Controller
 {
-    public function edit(Request $request): Response
+    public function edit(Request $request, ActiveCompanyContext $activeCompany): Response
     {
-        $company = $request->user()->company()->firstOrFail();
+        $company = $activeCompany->company();
+
+        abort_if($company === null, 404);
 
         $this->authorize('update', $company);
 
@@ -23,9 +26,11 @@ class CompanyController extends Controller
         ]);
     }
 
-    public function update(UpdateCompanyRequest $request): RedirectResponse
+    public function update(UpdateCompanyRequest $request, ActiveCompanyContext $activeCompany): RedirectResponse
     {
-        $company = $request->user()->company()->firstOrFail();
+        $company = $activeCompany->company();
+
+        abort_if($company === null, 404);
 
         $company->update($request->validated());
 

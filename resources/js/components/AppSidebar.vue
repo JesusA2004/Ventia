@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import {
-    Archive,
     ArrowLeftRight,
+    Archive,
+    Award,
+    BadgeHelp,
+    Banknote,
     Building2,
+    ClipboardCheck,
     ClipboardList,
     CreditCard,
+    HelpCircle,
     LayoutGrid,
-    ListChecks,
+    LineChart,
+    MapPin,
     Package,
     PackageSearch,
     Percent,
-    Receipt,
     ReceiptText,
     Shield,
     ShoppingBag,
@@ -39,11 +44,10 @@ import { dashboard } from '@/routes';
 import cash from '@/routes/cash';
 import { index as brandsIndex } from '@/routes/catalog/brands';
 import { index as categoriesIndex } from '@/routes/catalog/categories';
-import { index as priceListsIndex } from '@/routes/catalog/price-lists';
 import { index as taxesIndex } from '@/routes/catalog/taxes';
 import { index as unitsIndex } from '@/routes/catalog/units';
 import { index as customersIndex } from '@/routes/customers';
-import { create as adjustmentsCreate } from '@/routes/inventory/adjustments';
+import { gettingStarted, guide } from '@/routes/help';
 import { index as balancesIndex } from '@/routes/inventory/balances';
 import { index as countsIndex } from '@/routes/inventory/counts';
 import { index as kardexIndex } from '@/routes/inventory/kardex';
@@ -52,6 +56,7 @@ import { index as transfersIndex } from '@/routes/inventory/transfers';
 import { index as paymentMethodsIndex } from '@/routes/payment-methods';
 import { index as posIndex } from '@/routes/pos';
 import { index as productsIndex } from '@/routes/products';
+import { index as reportsIndex } from '@/routes/reports';
 import { index as rolesIndex } from '@/routes/roles';
 import salesRoutes from '@/routes/sales';
 import { index as branchesIndex } from '@/routes/settings/branches';
@@ -63,13 +68,16 @@ import type { NavItem } from '@/types';
 
 const { can } = usePermissions();
 
+/**
+ * Grouping follows the simplified target layout: Principal, Operación,
+ * Catálogo, Inventario, Análisis, Administración, Ayuda. "Listas de precios"
+ * is deliberately not linked here (business doesn't need pricing tiers yet —
+ * see item 13 of the audit); the route, models and price history stay fully
+ * functional, just not surfaced in navigation.
+ */
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
-        {
-            title: 'Dashboard',
-            href: dashboard(),
-            icon: LayoutGrid,
-        },
+        { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
     ];
 
     if (can('pos.access')) {
@@ -83,33 +91,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     return items;
 });
 
-const salesNavItems = computed<NavItem[]>(() => {
-    const items: NavItem[] = [];
-
-    if (can('sales.view')) {
-        items.push({
-            title: 'Historial de ventas',
-            href: salesRoutes.index(),
-            icon: ReceiptText,
-        });
-    }
-
-    if (can('customers.view')) {
-        items.push({ title: 'Clientes', href: customersIndex(), icon: Users });
-    }
-
-    if (can('payment-methods.manage')) {
-        items.push({
-            title: 'Métodos de pago',
-            href: paymentMethodsIndex(),
-            icon: CreditCard,
-        });
-    }
-
-    return items;
-});
-
-const cashNavItems = computed<NavItem[]>(() => {
+const operationNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [];
 
     if (can('cash.open')) {
@@ -126,6 +108,18 @@ const cashNavItems = computed<NavItem[]>(() => {
             href: cash.sessions.index(),
             icon: Wallet,
         });
+    }
+
+    if (can('sales.view')) {
+        items.push({
+            title: 'Ventas',
+            href: salesRoutes.index(),
+            icon: ReceiptText,
+        });
+    }
+
+    if (can('customers.view')) {
+        items.push({ title: 'Clientes', href: customersIndex(), icon: Users });
     }
 
     return items;
@@ -151,7 +145,7 @@ const catalogNavItems = computed<NavItem[]>(() => {
     }
 
     if (can('brands.manage')) {
-        items.push({ title: 'Marcas', href: brandsIndex(), icon: Package });
+        items.push({ title: 'Marcas', href: brandsIndex(), icon: Award });
     }
 
     if (can('units.manage')) {
@@ -164,14 +158,6 @@ const catalogNavItems = computed<NavItem[]>(() => {
 
     if (can('taxes.manage')) {
         items.push({ title: 'Impuestos', href: taxesIndex(), icon: Percent });
-    }
-
-    if (can('price-lists.manage')) {
-        items.push({
-            title: 'Listas de precios',
-            href: priceListsIndex(),
-            icon: Receipt,
-        });
     }
 
     return items;
@@ -190,17 +176,9 @@ const inventoryNavItems = computed<NavItem[]>(() => {
 
     if (can('inventory.kardex')) {
         items.push({
-            title: 'Kardex',
+            title: 'Movimientos',
             href: kardexIndex(),
             icon: ClipboardList,
-        });
-    }
-
-    if (can('inventory.adjust')) {
-        items.push({
-            title: 'Ajustes',
-            href: adjustmentsCreate(),
-            icon: ListChecks,
         });
     }
 
@@ -214,9 +192,9 @@ const inventoryNavItems = computed<NavItem[]>(() => {
 
     if (can('inventory.count')) {
         items.push({
-            title: 'Conteos físicos',
+            title: 'Conteos',
             href: countsIndex(),
-            icon: ClipboardList,
+            icon: ClipboardCheck,
         });
     }
 
@@ -225,6 +203,20 @@ const inventoryNavItems = computed<NavItem[]>(() => {
             title: 'Lotes y caducidades',
             href: lotsIndex(),
             icon: Archive,
+        });
+    }
+
+    return items;
+});
+
+const analysisNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [];
+
+    if (can('reports.view')) {
+        items.push({
+            title: 'Reportes',
+            href: reportsIndex(),
+            icon: LineChart,
         });
     }
 
@@ -246,7 +238,7 @@ const adminNavItems = computed<NavItem[]>(() => {
         items.push({
             title: 'Sucursales',
             href: branchesIndex(),
-            icon: Building2,
+            icon: MapPin,
         });
     }
 
@@ -266,16 +258,33 @@ const adminNavItems = computed<NavItem[]>(() => {
         });
     }
 
+    if (can('payment-methods.manage')) {
+        items.push({
+            title: 'Métodos de pago',
+            href: paymentMethodsIndex(),
+            icon: Banknote,
+        });
+    }
+
     if (can('users.manage')) {
         items.push({ title: 'Usuarios', href: usersIndex(), icon: Users });
     }
 
     if (can('roles.manage')) {
-        items.push({ title: 'Roles', href: rolesIndex(), icon: Shield });
+        items.push({
+            title: 'Roles y permisos',
+            href: rolesIndex(),
+            icon: Shield,
+        });
     }
 
     return items;
 });
+
+const helpNavItems = computed<NavItem[]>(() => [
+    { title: 'Primeros pasos', href: gettingStarted(), icon: BadgeHelp },
+    { title: 'Guía', href: guide(), icon: HelpCircle },
+]);
 </script>
 
 <template>
@@ -295,14 +304,9 @@ const adminNavItems = computed<NavItem[]>(() => {
         <SidebarContent>
             <NavMain :items="mainNavItems" label="Principal" />
             <NavMain
-                v-if="cashNavItems.length > 0"
-                :items="cashNavItems"
-                label="Caja"
-            />
-            <NavMain
-                v-if="salesNavItems.length > 0"
-                :items="salesNavItems"
-                label="Ventas"
+                v-if="operationNavItems.length > 0"
+                :items="operationNavItems"
+                label="Operación"
             />
             <NavMain
                 v-if="catalogNavItems.length > 0"
@@ -315,10 +319,16 @@ const adminNavItems = computed<NavItem[]>(() => {
                 label="Inventario"
             />
             <NavMain
+                v-if="analysisNavItems.length > 0"
+                :items="analysisNavItems"
+                label="Análisis"
+            />
+            <NavMain
                 v-if="adminNavItems.length > 0"
                 :items="adminNavItems"
                 label="Administración"
             />
+            <NavMain :items="helpNavItems" label="Ayuda" />
         </SidebarContent>
 
         <SidebarFooter>

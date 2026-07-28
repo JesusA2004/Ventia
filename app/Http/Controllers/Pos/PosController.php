@@ -15,6 +15,7 @@ use App\Models\Category;
 use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\Product;
+use App\Services\ActiveCompanyContext;
 use App\Services\Inventory\InventoryBalanceService;
 use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +29,7 @@ class PosController extends Controller
     public function __construct(
         private readonly InventoryBalanceService $balances,
         private readonly SettingsService $settings,
+        private readonly ActiveCompanyContext $activeCompany,
     ) {}
 
     public function index(Request $request): Response|RedirectResponse
@@ -35,7 +37,7 @@ class PosController extends Controller
         abort_unless($request->user()->can('pos.access'), 403);
 
         $user = $request->user();
-        $companyId = $user->company_id;
+        $companyId = $this->activeCompany->requireCompanyId();
 
         $session = CashSession::query()
             ->where('user_id', $user->id)

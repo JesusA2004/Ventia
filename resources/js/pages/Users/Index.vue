@@ -10,6 +10,11 @@ import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index } from '@/routes/users';
 import type { ManagedUser, Paginated } from '@/types';
@@ -83,24 +88,34 @@ function destroy(user: ManagedUser) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Button
-                        v-if="can('users.manage')"
-                        as-child
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <Link :href="UserController.edit.url(row.id)">
-                            <PencilIcon />
-                        </Link>
-                    </Button>
+                    <Tooltip v-if="can('users.manage')">
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Editar usuario"
+                            >
+                                <Link :href="UserController.edit.url(row.id)">
+                                    <PencilIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar usuario</TooltipContent>
+                    </Tooltip>
                     <ConfirmationDialog
                         v-if="can('users.manage') && row.id !== currentUser?.id"
                         title="¿Desactivar usuario?"
                         :description="`«${row.name}» perderá acceso al sistema. Podrás reactivarlo restaurando su registro.`"
+                        tooltip="Desactivar usuario"
                         @confirm="destroy(row)"
                     >
                         <template #trigger>
-                            <Button size="icon" variant="ghost">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Desactivar usuario"
+                            >
                                 <Trash2Icon />
                             </Button>
                         </template>

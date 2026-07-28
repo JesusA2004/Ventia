@@ -12,6 +12,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { ProductAttribute } from '@/types';
 
 const props = defineProps<{
@@ -94,14 +99,20 @@ function submit() {
                     v-model="value.value"
                     placeholder="Chica, Rojo, Chocolate..."
                 />
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    @click="removeValue(index)"
-                >
-                    <XIcon />
-                </Button>
+                <Tooltip>
+                    <TooltipTrigger as-child>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Quitar valor"
+                            @click="removeValue(index)"
+                        >
+                            <XIcon />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Quitar valor</TooltipContent>
+                </Tooltip>
             </div>
             <Button type="button" variant="outline" size="sm" @click="addValue">
                 <PlusIcon />

@@ -8,6 +8,7 @@ use App\Http\Resources\BranchResource;
 use App\Http\Resources\UserResource;
 use App\Models\Branch;
 use App\Models\User;
+use App\Services\ActiveCompanyContext;
 use App\Support\PaginatedResource;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +20,7 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly ActiveCompanyContext $activeCompany)
     {
         $this->authorizeResource(User::class, 'user');
     }
@@ -56,7 +57,7 @@ class UserController extends Controller
         DB::transaction(function () use ($request) {
             $user = User::create([
                 ...$request->safe()->except(['password', 'role', 'branch_ids']),
-                'company_id' => $request->user()->company_id,
+                'company_id' => $this->activeCompany->requireCompanyId(),
                 'password' => $request->validated('password'),
                 'email_verified_at' => now(),
             ]);

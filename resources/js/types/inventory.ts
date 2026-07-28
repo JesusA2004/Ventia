@@ -48,7 +48,9 @@ export type InventoryBalance = {
     lot_number?: string | null;
     expiration_date?: string | null;
     quantity: string;
-    average_cost: string;
+    unit_symbol?: string | null;
+    unit_allows_fraction?: boolean;
+    average_cost?: string;
     minimum_stock?: string;
     is_low_stock?: boolean;
 };

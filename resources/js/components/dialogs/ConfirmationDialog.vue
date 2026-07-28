@@ -10,6 +10,11 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 type Props = {
     title: string;
@@ -17,6 +22,8 @@ type Props = {
     confirmLabel?: string;
     cancelLabel?: string;
     variant?: 'default' | 'destructive';
+    /** Shown on hover over the trigger — required for icon-only triggers. */
+    tooltip?: string;
 };
 
 withDefaults(defineProps<Props>(), {
@@ -30,7 +37,15 @@ const emit = defineEmits<{ confirm: [] }>();
 
 <template>
     <AlertDialog>
-        <AlertDialogTrigger as-child>
+        <Tooltip v-if="tooltip">
+            <TooltipTrigger as-child>
+                <AlertDialogTrigger as-child>
+                    <slot name="trigger" />
+                </AlertDialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>{{ tooltip }}</TooltipContent>
+        </Tooltip>
+        <AlertDialogTrigger v-else as-child>
             <slot name="trigger" />
         </AlertDialogTrigger>
         <AlertDialogContent>

@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T extends object">
-import { Link } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
+import { computed } from 'vue';
+import Pagination from '@/components/tables/Pagination.vue';
 import {
     Table,
     TableBody,
@@ -9,7 +9,6 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { cn } from '@/lib/utils';
 import type { Paginated } from '@/types';
 
 export type DataTableColumn = {
@@ -18,10 +17,19 @@ export type DataTableColumn = {
     class?: string;
 };
 
-defineProps<{
+/**
+ * Accepts either a paginated listing (paginated) or a plain, already-loaded
+ * collection (rows) — e.g. Payment Methods, which the backend never
+ * paginates. Passing rows skips the "Mostrando X–Y de Z" footer entirely
+ * instead of faking pagination metadata just to satisfy this component.
+ */
+const props = defineProps<{
     columns: DataTableColumn[];
-    paginated: Paginated<T>;
+    paginated?: Paginated<T>;
+    rows?: T[];
 }>();
+
+const items = computed<T[]>(() => props.rows ?? props.paginated?.data ?? []);
 
 function cellValue(row: T, key: string): unknown {
     return (row as Record<string, unknown>)[key];
@@ -44,15 +52,12 @@ function cellValue(row: T, key: string): unknown {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    <TableRow v-if="paginated.data.length === 0">
+                    <TableRow v-if="items.length === 0">
                         <TableCell :colspan="columns.length" class="p-0">
                             <slot name="empty" />
                         </TableCell>
                     </TableRow>
-                    <TableRow
-                        v-for="(row, index) in paginated.data"
-                        :key="index"
-                    >
+                    <TableRow v-for="(row, index) in items" :key="index">
                         <TableCell
                             v-for="column in columns"
                             :key="column.key"
@@ -67,30 +72,10 @@ function cellValue(row: T, key: string): unknown {
             </Table>
         </div>
 
-        <div
-            v-if="paginated.data.length > 0"
-            class="flex flex-col items-center justify-between gap-3 sm:flex-row"
-        >
-            <p class="text-sm text-muted-foreground">
-                Mostrando {{ paginated.meta.from }}–{{ paginated.meta.to }} de
-                {{ paginated.meta.total }}
-            </p>
-            <div class="flex flex-wrap items-center gap-1">
-                <Button
-                    v-for="(link, index) in paginated.links"
-                    :key="index"
-                    as-child
-                    size="sm"
-                    :variant="link.active ? 'default' : 'outline'"
-                    :disabled="!link.url"
-                    :class="cn(!link.url && 'pointer-events-none opacity-50')"
-                >
-                    <Link v-if="link.url" :href="link.url" preserve-scroll>
-                        <span v-html="link.label" />
-                    </Link>
-                    <span v-else v-html="link.label" />
-                </Button>
-            </div>
-        </div>
+        <Pagination
+            v-if="paginated && items.length > 0"
+            :meta="paginated.meta"
+            :links="paginated.links"
+        />
     </div>
 </template>

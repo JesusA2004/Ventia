@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sales;
 
 use App\Enums\CustomerType;
+use App\Enums\SaleStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreCustomerRequest;
 use App\Http\Requests\Sales\UpdateCustomerRequest;
@@ -130,9 +131,21 @@ class CustomerController extends Controller
             ->orderByDesc('id')
             ->paginate(15);
 
+        $countedSales = $customer->sales()
+            ->whereIn('status', [SaleStatus::Completed, SaleStatus::PartiallyReturned]);
+
+        $totalPurchased = (float) (clone $countedSales)->sum('total');
+        $purchaseCount = (clone $countedSales)->count();
+        $lastPurchaseAt = (clone $countedSales)->max('completed_at');
+
         return Inertia::render('Sales/Customers/SalesHistory', [
             'customer' => CustomerResource::make($customer),
             'sales' => PaginatedResource::make($sales, SaleResource::class),
+            'stats' => [
+                'total_purchased' => number_format($totalPurchased, 2, '.', ''),
+                'last_purchase_at' => $lastPurchaseAt,
+                'average_ticket' => number_format($purchaseCount > 0 ? $totalPurchased / $purchaseCount : 0, 2, '.', ''),
+            ],
         ]);
     }
 

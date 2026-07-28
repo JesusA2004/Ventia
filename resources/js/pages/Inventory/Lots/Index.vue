@@ -10,6 +10,11 @@ import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index } from '@/routes/inventory/lots';
 import type { Paginated, ProductLot } from '@/types';
@@ -100,16 +105,25 @@ function toggleExpiringSoon(value: boolean) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Button
-                        v-if="can('inventory.adjust')"
-                        as-child
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <Link :href="ProductLotController.edit.url(row.id)">
-                            <PencilIcon />
-                        </Link>
-                    </Button>
+                    <Tooltip v-if="can('inventory.adjust')">
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Editar lote"
+                            >
+                                <Link
+                                    :href="
+                                        ProductLotController.edit.url(row.id)
+                                    "
+                                >
+                                    <PencilIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar lote</TooltipContent>
+                    </Tooltip>
                 </div>
             </template>
         </ServerDataTable>

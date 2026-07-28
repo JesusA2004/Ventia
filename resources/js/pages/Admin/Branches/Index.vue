@@ -10,6 +10,11 @@ import StatusBadge from '@/components/StatusBadge.vue';
 import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index } from '@/routes/settings/branches';
 import type { Branch, Paginated } from '@/types';
@@ -79,24 +84,34 @@ function destroy(branch: Branch) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Button
-                        v-if="can('branches.manage')"
-                        as-child
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <Link :href="BranchController.edit.url(row.id)">
-                            <PencilIcon />
-                        </Link>
-                    </Button>
+                    <Tooltip v-if="can('branches.manage')">
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Editar sucursal"
+                            >
+                                <Link :href="BranchController.edit.url(row.id)">
+                                    <PencilIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar sucursal</TooltipContent>
+                    </Tooltip>
                     <ConfirmationDialog
                         v-if="can('branches.manage')"
                         title="¿Eliminar sucursal?"
                         :description="`Esta acción eliminará «${row.name}» de forma reversible.`"
+                        tooltip="Eliminar sucursal"
                         @confirm="destroy(row)"
                     >
                         <template #trigger>
-                            <Button size="icon" variant="ghost">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Eliminar sucursal"
+                            >
                                 <Trash2Icon />
                             </Button>
                         </template>
