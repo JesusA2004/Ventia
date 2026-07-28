@@ -50,7 +50,9 @@ function submit() {
             :description="`Caja: ${session.register_name} — abierta ${formatDateTime(session.opened_at)}. Esta empresa requiere que un supervisor revise tu entrega antes de cerrar tu turno.`"
         />
 
-        <p class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+        <p
+            class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground"
+        >
             Cuenta el efectivo físico en tu caja por denominación. El sistema
             comparará tu conteo contra lo esperado una vez que un supervisor
             revise la entrega — no verás el esperado en esta pantalla.
@@ -71,11 +73,18 @@ function submit() {
                     placeholder="Cualquier situación relevante durante tu turno..."
                 />
             </FormField>
-            <p v-if="form.errors.denominations" class="text-sm text-destructive">
+            <p
+                v-if="form.errors.denominations"
+                class="text-sm text-destructive"
+            >
                 {{ form.errors.denominations }}
             </p>
             <Button type="submit" size="lg" :disabled="form.processing">
-                {{ form.processing ? 'Enviando...' : 'Enviar entrega para revisión' }}
+                {{
+                    form.processing
+                        ? 'Enviando...'
+                        : 'Enviar entrega para revisión'
+                }}
             </Button>
         </form>
     </div>

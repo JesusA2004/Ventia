@@ -27,9 +27,12 @@ trait BelongsToCompany
 
             // Regular users always resolve to their own company; a
             // superadmin (company_id === null) resolves to whichever
-            // company they've selected as active, so records they create
-            // are never silently orphaned with company_id = null.
-            $model->company_id = App::make(ActiveCompanyContext::class)->companyId();
+            // company they've selected as active. requireCompanyId() (not
+            // the nullable companyId()) is deliberate: a superadmin with no
+            // active selection must never silently create a record with
+            // company_id = null — they get NoActiveCompanySelectedException
+            // instead, which renders as a friendly redirect, not a 500.
+            $model->company_id = App::make(ActiveCompanyContext::class)->requireCompanyId();
         });
     }
 

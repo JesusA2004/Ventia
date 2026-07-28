@@ -10,6 +10,7 @@ import {
     ClipboardCheck,
     ClipboardList,
     CreditCard,
+    HandCoins,
     HelpCircle,
     LayoutGrid,
     LineChart,
@@ -107,6 +108,14 @@ const operationNavItems = computed<NavItem[]>(() => {
             title: 'Sesiones de caja',
             href: cash.sessions.index(),
             icon: Wallet,
+        });
+    }
+
+    if (can('cash.approve-close') || can('cash.receive-handover')) {
+        items.push({
+            title: 'Entregas pendientes',
+            href: cash.handovers.index(),
+            icon: HandCoins,
         });
     }
 

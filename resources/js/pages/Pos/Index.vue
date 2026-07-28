@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { ClockIcon, PercentIcon } from '@lucide/vue';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { toast } from 'vue-sonner';
@@ -47,6 +47,7 @@ defineOptions({
 });
 
 const cart = useCartStore();
+const page = usePage();
 const grid = ref<InstanceType<typeof ProductGrid> | null>(null);
 const checkoutOpen = ref(false);
 const customerPickerOpen = ref(false);
@@ -59,7 +60,7 @@ const discountType = ref<'percentage' | 'fixed'>('percentage');
 const discountValue = ref('');
 
 onMounted(() => {
-    cart.restore();
+    cart.restore(page.props.activeCompany?.id ?? null);
 
     if (!cart.customer && props.defaultCustomer) {
         cart.customer = props.defaultCustomer;

@@ -7,6 +7,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { formatCurrency, formatDateTime } from '@/lib/format';
 import cash from '@/routes/cash';
 import type { CashSession, CashSessionSummary } from '@/types';
 
@@ -49,66 +50,60 @@ function submit() {
     <div class="mx-auto flex max-w-3xl flex-col gap-6">
         <PageHeader
             title="Cierre y arqueo de caja"
-            :description="`Caja: ${session.register_name} — abierta ${new Date(session.opened_at).toLocaleString()}`"
+            :description="`Caja: ${session.register_name} — abierta ${formatDateTime(session.opened_at)}`"
         />
 
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2 rounded-lg border p-4 text-sm">
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Fondo inicial</span
-                    ><span
-                        >${{ Number(summary.opening_amount).toFixed(2) }}</span
-                    >
+                    ><span>{{ formatCurrency(summary.opening_amount) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Ventas en efectivo</span
-                    ><span>${{ Number(summary.cash_sales).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(summary.cash_sales) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Depósitos</span
-                    ><span>${{ Number(summary.deposits).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(summary.deposits) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Retiros</span
-                    ><span>-${{ Number(summary.withdrawals).toFixed(2) }}</span>
+                    ><span>-{{ formatCurrency(summary.withdrawals) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Gastos</span
-                    ><span>-${{ Number(summary.expenses).toFixed(2) }}</span>
+                    ><span>-{{ formatCurrency(summary.expenses) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Reembolsos</span
-                    ><span>-${{ Number(summary.refunds).toFixed(2) }}</span>
+                    ><span>-{{ formatCurrency(summary.refunds) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Ajustes</span
-                    ><span>${{ Number(summary.adjustments).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(summary.adjustments) }}</span>
                 </div>
                 <div class="flex justify-between border-t pt-2 font-semibold">
                     <span>Efectivo esperado</span
-                    ><span
-                        >${{ Number(summary.expected_cash).toFixed(2) }}</span
-                    >
+                    ><span>{{ formatCurrency(summary.expected_cash) }}</span>
                 </div>
             </div>
             <div class="space-y-2 rounded-lg border p-4 text-sm">
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Pagos con tarjeta</span
-                    ><span>${{ Number(summary.card_total).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(summary.card_total) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Transferencias</span
-                    ><span
-                        >${{ Number(summary.transfer_total).toFixed(2) }}</span
-                    >
+                    ><span>{{ formatCurrency(summary.transfer_total) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Otros métodos</span
-                    ><span>${{ Number(summary.other_total).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(summary.other_total) }}</span>
                 </div>
                 <div class="flex justify-between border-t pt-2 font-semibold">
                     <span>Total general del turno</span
-                    ><span>${{ Number(summary.grand_total).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(summary.grand_total) }}</span>
                 </div>
             </div>
         </div>
@@ -166,11 +161,11 @@ function submit() {
                             : 'text-green-600'
                     "
                 >
-                    ${{
-                        (
+                    {{
+                        formatCurrency(
                             Number(form.counted_cash) -
-                            Number(summary.expected_cash)
-                        ).toFixed(2)
+                                Number(summary.expected_cash),
+                        )
                     }}
                 </span>
             </p>

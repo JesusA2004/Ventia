@@ -58,6 +58,14 @@ export const useCartStore = defineStore('pos-cart', () => {
         value: string;
     } | null>(null);
     const payments = ref<CartPayment[]>([]);
+    /**
+     * The company the current cart belongs to. A superadministrator can
+     * switch active company mid-session — restore() uses this to discard a
+     * stale cart from a previous company instead of leaking it across the
+     * tenant boundary, since this Pinia store is a client-side singleton
+     * that survives Inertia navigation.
+     */
+    const companyId = ref<number | null>(null);
 
     function lineKey(productId: number, variantId: number | null): string {
         return `${productId}:${variantId ?? 'base'}`;
@@ -232,6 +240,7 @@ export const useCartStore = defineStore('pos-cart', () => {
                     customer: customer.value,
                     notes: notes.value,
                     generalDiscount: generalDiscount.value,
+                    companyId: companyId.value,
                 }),
             );
         } catch {
@@ -239,7 +248,20 @@ export const useCartStore = defineStore('pos-cart', () => {
         }
     }
 
-    function restore() {
+    /**
+     * @param currentCompanyId the company the POS screen is currently
+     * operating on (from the shared `activeCompany` Inertia prop) — pass it
+     * every time the POS page mounts so a cart left over from a different
+     * company (superadmin switching companies) is discarded rather than
+     * restored into the wrong tenant.
+     */
+    function restore(currentCompanyId: number | null) {
+        if (companyId.value !== null && companyId.value !== currentCompanyId) {
+            clear();
+        }
+
+        companyId.value = currentCompanyId;
+
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
 
@@ -248,6 +270,13 @@ export const useCartStore = defineStore('pos-cart', () => {
             }
 
             const data = JSON.parse(raw);
+
+            if (data.companyId !== currentCompanyId) {
+                clearPersisted();
+
+                return;
+            }
+
             lines.value = data.lines ?? [];
             customer.value = data.customer ?? null;
             notes.value = data.notes ?? '';

@@ -18,6 +18,8 @@ class CashHandoverResource extends JsonResource
             'id' => $this->id,
             'cash_session_id' => $this->cash_session_id,
             'register_name' => $this->whenLoaded('cashSession', fn () => $this->cashSession->register?->name),
+            'opening_amount' => $this->whenLoaded('cashSession', fn () => (string) $this->cashSession->opening_amount),
+            'branch_name' => $this->whenLoaded('branch', fn () => $this->branch->name),
             'cashier_id' => $this->cashier_id,
             'cashier_name' => $this->whenLoaded('cashier', fn () => $this->cashier->name),
             'approved_by' => $this->approved_by,

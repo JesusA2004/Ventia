@@ -114,6 +114,19 @@ test('a superadministrator creating a product without an active company is redir
         ->assertRedirect(route('company-selection.index'));
 });
 
+test('a superadministrator without an active company cannot create records with a null company_id', function () {
+    $superAdmin = superAdmin();
+
+    $this->actingAs($superAdmin)
+        ->post(route('catalog.categories.store'), [
+            'name' => 'Categoría huérfana',
+            'status' => 'active',
+        ])
+        ->assertRedirect(route('company-selection.index'));
+
+    expect(Category::withoutGlobalScopes()->where('name', 'Categoría huérfana')->exists())->toBeFalse();
+});
+
 test('records created by a superadministrator with an active company are attributed to that company, not left orphaned', function () {
     $superAdmin = superAdmin();
     $company = Company::factory()->create();

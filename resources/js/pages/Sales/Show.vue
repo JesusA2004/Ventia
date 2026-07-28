@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
+import { formatCurrency, formatDateTime } from '@/lib/format';
 import sales from '@/routes/sales';
 import type { Sale } from '@/types';
 
@@ -103,9 +104,7 @@ const canReturn = ['completed', 'partially_returned'].includes(
         <PageHeader
             :title="`Venta ${sale.folio}`"
             :description="
-                sale.completed_at
-                    ? new Date(sale.completed_at).toLocaleString()
-                    : ''
+                sale.completed_at ? formatDateTime(sale.completed_at) : ''
             "
         >
             <template #actions>
@@ -258,13 +257,13 @@ const canReturn = ['completed', 'partially_returned'].includes(
                         </td>
                         <td class="p-3 text-right">{{ item.quantity }}</td>
                         <td class="p-3 text-right">
-                            ${{ Number(item.unit_price).toFixed(2) }}
+                            {{ formatCurrency(item.unit_price) }}
                         </td>
                         <td class="p-3 text-right">
-                            ${{ Number(item.discount_amount).toFixed(2) }}
+                            {{ formatCurrency(item.discount_amount) }}
                         </td>
                         <td class="p-3 text-right font-medium">
-                            ${{ Number(item.total).toFixed(2) }}
+                            {{ formatCurrency(item.total) }}
                         </td>
                     </tr>
                 </tbody>
@@ -275,34 +274,34 @@ const canReturn = ['completed', 'partially_returned'].includes(
             <div class="space-y-1 rounded-lg border p-4 text-sm">
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Subtotal</span
-                    ><span>${{ Number(sale.subtotal).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.subtotal) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Descuento</span
-                    ><span>-${{ Number(sale.discount_total).toFixed(2) }}</span>
+                    ><span>-{{ formatCurrency(sale.discount_total) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Impuestos</span
-                    ><span>${{ Number(sale.tax_total).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.tax_total) }}</span>
                 </div>
                 <div class="flex justify-between border-t pt-1 font-semibold">
                     <span>Total</span
-                    ><span>${{ Number(sale.total).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.total) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Recibido</span
-                    ><span>${{ Number(sale.amount_received).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.amount_received) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-muted-foreground">Cambio</span
-                    ><span>${{ Number(sale.change_amount).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.change_amount) }}</span>
                 </div>
                 <div
                     v-if="sale.profit_total !== undefined"
                     class="flex justify-between"
                 >
                     <span class="text-muted-foreground">Utilidad</span
-                    ><span>${{ Number(sale.profit_total).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.profit_total) }}</span>
                 </div>
             </div>
             <div class="space-y-2 rounded-lg border p-4 text-sm">
@@ -315,7 +314,7 @@ const canReturn = ['completed', 'partially_returned'].includes(
                     <span class="text-muted-foreground">{{
                         payment.payment_method_name
                     }}</span>
-                    <span>${{ Number(payment.amount).toFixed(2) }}</span>
+                    <span>{{ formatCurrency(payment.amount) }}</span>
                 </div>
                 <p class="pt-2 font-medium">Cliente</p>
                 <p>{{ sale.customer_name }}</p>

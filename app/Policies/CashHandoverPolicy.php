@@ -22,9 +22,4 @@ class CashHandoverPolicy
             || $user->can('cash.approve-close')
             || $user->can('cash.receive-handover');
     }
-
-    public function resolve(User $user, CashHandover $handover): bool
-    {
-        return $user->company_id === $handover->company_id && $user->can('cash.approve-close');
-    }
 }

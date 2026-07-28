@@ -37,7 +37,7 @@ class CashHandoverController extends Controller
         $this->authorize('viewAny', CashHandover::class);
 
         $handovers = CashHandover::query()
-            ->with(['cashier:id,name', 'cashSession.register:id,name'])
+            ->with(['cashier:id,name', 'branch:id,name', 'cashSession:id,register_id,opening_amount', 'cashSession.register:id,name'])
             ->where('status', CashHandoverStatus::Pending)
             ->orderBy('requested_at')
             ->paginate(15);
@@ -72,7 +72,13 @@ class CashHandoverController extends Controller
         $this->authorize('view', $cashHandover);
 
         return Inertia::render('Cash/Handovers/Show', [
-            'handover' => CashHandoverResource::make($cashHandover->load(['cashier:id,name', 'approver:id,name', 'cashSession.register:id,name'])),
+            'handover' => CashHandoverResource::make($cashHandover->load([
+                'cashier:id,name',
+                'approver:id,name',
+                'branch:id,name',
+                'cashSession:id,register_id,opening_amount',
+                'cashSession.register:id,name',
+            ])),
         ]);
     }
 

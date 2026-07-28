@@ -7,9 +7,17 @@ use Illuminate\Validation\Rule;
 
 class ResolveCashHandoverRequest extends FormRequest
 {
+    /**
+     * The acting session only needs to be able to *see* this handover (the
+     * cashier who requested it, or a viewer/approver in the same company) —
+     * the actual approve/reject/recount authorization is enforced inside
+     * CashHandoverController::resolve() via the supervisor_email/password
+     * lookup, precisely so a different, authorized user can validate the
+     * decision without the cashier's own session being logged out.
+     */
     public function authorize(): bool
     {
-        return $this->user()->can('resolve', $this->route('cash_handover'));
+        return $this->user()->can('view', $this->route('cash_handover'));
     }
 
     /**

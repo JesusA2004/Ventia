@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
+import { formatCurrency, formatDateTime } from '@/lib/format';
 import cash from '@/routes/cash';
 import type { CashMovement, CashSession, CashSessionSummary } from '@/types';
 
@@ -159,7 +160,7 @@ function submitMovement() {
             <div class="rounded-lg border p-3 text-sm">
                 <p class="text-muted-foreground">Fondo inicial</p>
                 <p class="text-lg font-semibold">
-                    ${{ Number(session.opening_amount).toFixed(2) }}
+                    {{ formatCurrency(session.opening_amount) }}
                 </p>
             </div>
             <div
@@ -168,7 +169,7 @@ function submitMovement() {
             >
                 <p class="text-muted-foreground">Efectivo esperado</p>
                 <p class="text-lg font-semibold">
-                    ${{ Number(session.expected_cash).toFixed(2) }}
+                    {{ formatCurrency(session.expected_cash) }}
                 </p>
             </div>
             <div
@@ -184,7 +185,7 @@ function submitMovement() {
                             : 'text-green-600'
                     "
                 >
-                    ${{ Number(session.difference).toFixed(2) }}
+                    {{ formatCurrency(session.difference) }}
                 </p>
             </div>
             <div v-else-if="summary" class="rounded-lg border p-3 text-sm">
@@ -192,7 +193,7 @@ function submitMovement() {
                     Efectivo esperado (en curso)
                 </p>
                 <p class="text-lg font-semibold">
-                    ${{ Number(summary.expected_cash).toFixed(2) }}
+                    {{ formatCurrency(summary.expected_cash) }}
                 </p>
             </div>
         </div>
@@ -215,9 +216,7 @@ function submitMovement() {
                         class="border-b last:border-0"
                     >
                         <td class="p-3">
-                            {{
-                                new Date(movement.occurred_at).toLocaleString()
-                            }}
+                            {{ formatDateTime(movement.occurred_at) }}
                         </td>
                         <td class="p-3">{{ movement.type_label }}</td>
                         <td class="p-3">{{ movement.user_name }}</td>
@@ -230,9 +229,8 @@ function submitMovement() {
                                     : 'text-destructive'
                             "
                         >
-                            {{ movement.is_inflow ? '+' : '-' }}${{
-                                Number(movement.amount).toFixed(2)
-                            }}
+                            {{ movement.is_inflow ? '+' : '-'
+                            }}{{ formatCurrency(movement.amount) }}
                         </td>
                     </tr>
                     <tr v-if="!movements.length">

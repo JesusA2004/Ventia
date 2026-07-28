@@ -2,6 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
+import { formatCurrency, formatDateTime } from '@/lib/format';
 import type { Sale } from '@/types';
 
 type CompanyInfo = {
@@ -77,7 +78,7 @@ function printTicket() {
                     Fecha:
                     {{
                         sale.completed_at
-                            ? new Date(sale.completed_at).toLocaleString()
+                            ? formatDateTime(sale.completed_at)
                             : ''
                     }}
                 </p>
@@ -89,20 +90,18 @@ function printTicket() {
                 <div v-for="item in sale.items" :key="item.id" class="mb-1">
                     <div class="flex justify-between">
                         <span>{{ item.product_name }}</span>
-                        <span>${{ Number(item.total).toFixed(2) }}</span>
+                        <span>{{ formatCurrency(item.total) }}</span>
                     </div>
                     <div
                         class="flex justify-between text-[10px] text-muted-foreground"
                     >
                         <span
-                            >{{ item.quantity }} x ${{
-                                Number(item.unit_price).toFixed(2)
-                            }}</span
+                            >{{ item.quantity }} x
+                            {{ formatCurrency(item.unit_price) }}</span
                         >
                         <span v-if="Number(item.discount_amount) > 0"
-                            >Desc: ${{
-                                Number(item.discount_amount).toFixed(2)
-                            }}</span
+                            >Desc:
+                            {{ formatCurrency(item.discount_amount) }}</span
                         >
                     </div>
                 </div>
@@ -111,19 +110,19 @@ function printTicket() {
             <div class="space-y-0.5 border-t border-dashed pt-2">
                 <div class="flex justify-between">
                     <span>Subtotal</span
-                    ><span>${{ Number(sale.subtotal).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.subtotal) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span>Descuento</span
-                    ><span>-${{ Number(sale.discount_total).toFixed(2) }}</span>
+                    ><span>-{{ formatCurrency(sale.discount_total) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span>Impuestos</span
-                    ><span>${{ Number(sale.tax_total).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.tax_total) }}</span>
                 </div>
                 <div class="flex justify-between text-sm font-bold">
                     <span>TOTAL</span
-                    ><span>${{ Number(sale.total).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.total) }}</span>
                 </div>
             </div>
 
@@ -134,15 +133,15 @@ function printTicket() {
                     class="flex justify-between"
                 >
                     <span>{{ payment.payment_method_name }}</span>
-                    <span>${{ Number(payment.amount).toFixed(2) }}</span>
+                    <span>{{ formatCurrency(payment.amount) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span>Recibido</span
-                    ><span>${{ Number(sale.amount_received).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.amount_received) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span>Cambio</span
-                    ><span>${{ Number(sale.change_amount).toFixed(2) }}</span>
+                    ><span>{{ formatCurrency(sale.change_amount) }}</span>
                 </div>
             </div>
 

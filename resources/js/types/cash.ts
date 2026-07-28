@@ -42,6 +42,36 @@ export type CashMovement = {
     occurred_at: string;
 };
 
+export type CashHandoverStatus =
+    'pending' | 'approved' | 'rejected' | 'recount_requested';
+
+export type CashHandoverDenomination = {
+    denomination: number;
+    quantity: number;
+};
+
+export type CashHandover = {
+    id: number;
+    cash_session_id: number;
+    register_name?: string;
+    opening_amount?: string;
+    branch_name?: string;
+    cashier_id: number;
+    cashier_name?: string;
+    approved_by: number | null;
+    approver_name?: string | null;
+    status: CashHandoverStatus;
+    status_label: string;
+    expected_cash: string;
+    counted_cash: string;
+    difference: string;
+    denominations: CashHandoverDenomination[];
+    cashier_notes: string | null;
+    supervisor_notes: string | null;
+    requested_at: string;
+    resolved_at: string | null;
+};
+
 export type CashSessionSummary = {
     opening_amount: string;
     cash_sales: string;
