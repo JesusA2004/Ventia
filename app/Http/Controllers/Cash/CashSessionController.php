@@ -99,7 +99,7 @@ class CashSessionController extends Controller
             throw ValidationException::withMessages(['register_id' => $e->getMessage()]);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Caja abierta correctamente.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Caja abierta correctamente. Ya puedes comenzar a vender.']);
 
         return to_route('pos.index', ['cash_session' => $session->id]);
     }

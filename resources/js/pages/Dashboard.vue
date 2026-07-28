@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
+    AlertTriangleIcon,
     BanknoteIcon,
-    CreditCardIcon,
     PackageIcon,
-    PercentIcon,
     ReceiptIcon,
     RotateCcwIcon,
     ScaleIcon,
     TicketIcon,
-    TrendingDownIcon,
     TrendingUpIcon,
     WalletIcon,
     XCircleIcon,
@@ -28,18 +26,10 @@ import {
 } from 'chart.js';
 import { computed } from 'vue';
 import { Bar, Doughnut, Line } from 'vue-chartjs';
-import EmptyState from '@/components/EmptyState.vue';
-import PageHeader from '@/components/PageHeader.vue';
+import ChartCard from '@/components/dashboard/ChartCard.vue';
+import DashboardFilters from '@/components/dashboard/DashboardFilters.vue';
+import MetricCard from '@/components/dashboard/MetricCard.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { formatCurrency, formatQuantity } from '@/lib/format';
 import { dashboard } from '@/routes';
 import type { Branch, CashRegister } from '@/types';
@@ -71,10 +61,12 @@ type Metrics = {
     cash_difference: string;
     cash_session_open: boolean;
     low_stock_count: number;
+    expiring_lots_count: number;
     comparison: {
         sales_total: number | null;
         sales_count: number | null;
         ticket_average: number | null;
+        profit_total: number | null;
     };
     sales_over_time: { date: string; total: string; tickets: number }[];
     sales_by_branch: { name: string; total: string }[];
@@ -83,16 +75,19 @@ type Metrics = {
     top_categories: { name: string; total: string }[];
 };
 
+type Filters = {
+    preset: string;
+    date_from: string;
+    date_to: string;
+    granularity: 'hour' | 'day' | 'week';
+    branch_id: number | null;
+    register_id: number | null;
+    cashier_id: number | null;
+};
+
 const props = defineProps<{
     metrics: Metrics;
-    filters: {
-        preset: string;
-        date_from: string;
-        date_to: string;
-        branch_id: number | null;
-        register_id: number | null;
-        cashier_id: number | null;
-    };
+    filters: Filters;
     branchOptions: Branch[];
     registerOptions: CashRegister[];
     cashierOptions: { id: number; name: string }[];
@@ -104,37 +99,43 @@ defineOptions({
     },
 });
 
-const presets = [
-    { value: 'today', label: 'Hoy' },
-    { value: 'yesterday', label: 'Ayer' },
-    { value: 'this_week', label: 'Esta semana' },
-    { value: 'last_week', label: 'Semana anterior' },
-    { value: 'this_month', label: 'Este mes' },
-    { value: 'last_month', label: 'Mes anterior' },
-];
+const page = usePage();
+const activeCompanyName = computed(() => page.props.activeCompany?.name);
 
 function apply(partial: Record<string, string | number | undefined>) {
     router.get(
         dashboard().url,
         { ...props.filters, ...partial },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        },
+        { preserveState: true, preserveScroll: true, replace: true },
     );
 }
 
-function setPreset(preset: string) {
-    apply({ preset, date_from: undefined, date_to: undefined });
+function reset() {
+    router.get(
+        dashboard().url,
+        {},
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
 }
 
-function setCustomRange(key: 'date_from' | 'date_to', value: string) {
-    apply({ preset: 'custom', [key]: value });
+const granularityOptions: { value: Filters['granularity']; label: string }[] = [
+    { value: 'hour', label: 'Por hora' },
+    { value: 'day', label: 'Por día' },
+    { value: 'week', label: 'Por semana' },
+];
+
+function timeLabel(date: string, granularity: Filters['granularity']): string {
+    if (granularity === 'hour') {
+        return date.slice(11, 16);
+    }
+
+    return date.slice(5).split('-').reverse().join('/');
 }
 
 const salesOverTimeChart = computed(() => ({
-    labels: props.metrics.sales_over_time.map((d) => d.date.slice(5)),
+    labels: props.metrics.sales_over_time.map((d) =>
+        timeLabel(d.date, props.filters.granularity),
+    ),
     datasets: [
         {
             label: 'Ventas',
@@ -147,19 +148,9 @@ const salesOverTimeChart = computed(() => ({
     ],
 }));
 
-const ticketAverageChart = computed(() => ({
-    labels: props.metrics.sales_over_time.map((d) => d.date.slice(5)),
-    datasets: [
-        {
-            label: 'Ticket promedio',
-            data: props.metrics.sales_over_time.map((d) =>
-                d.tickets > 0 ? Number(d.total) / d.tickets : 0,
-            ),
-            borderColor: '#22c55e',
-            tension: 0.3,
-        },
-    ],
-}));
+const salesTrend = computed(() =>
+    props.metrics.sales_over_time.slice(-14).map((d) => Number(d.total)),
+);
 
 const branchChart = computed(() => ({
     labels: props.metrics.sales_by_branch.map((b) => b.name),
@@ -219,256 +210,136 @@ const chartOptions = {
     plugins: { legend: { display: false } },
 };
 
-const horizontalBarOptions = {
-    ...chartOptions,
-    indexAxis: 'y' as const,
-};
-
-function comparisonLabel(value: number | null): string | null {
-    if (value === null) {
-        return null;
-    }
-
-    const sign = value > 0 ? '+' : '';
-
-    return `${sign}${value}% vs. período anterior`;
-}
+const horizontalBarOptions = { ...chartOptions, indexAxis: 'y' as const };
 </script>
 
 <template>
     <Head title="Dashboard" />
 
     <div class="flex flex-col gap-6 p-4">
-        <PageHeader
-            title="Dashboard"
-            description="Resumen de ventas, caja e inventario del período seleccionado."
+        <DashboardFilters
+            :filters="filters"
+            :branch-options="branchOptions"
+            :register-options="registerOptions"
+            :cashier-options="cashierOptions"
+            :active-company-name="activeCompanyName"
+            @update="apply"
+            @reset="reset"
         />
 
-        <div class="flex flex-wrap items-end gap-3">
-            <div class="flex flex-wrap gap-1">
-                <Button
-                    v-for="preset in presets"
-                    :key="preset.value"
-                    size="sm"
-                    :variant="
-                        filters.preset === preset.value ? 'default' : 'outline'
-                    "
-                    @click="setPreset(preset.value)"
-                >
-                    {{ preset.label }}
-                </Button>
-            </div>
-
-            <div class="space-y-1.5">
-                <Label for="date_from">Desde</Label>
-                <Input
-                    id="date_from"
-                    type="date"
-                    :model-value="filters.date_from"
-                    @change="
-                        (e: Event) =>
-                            setCustomRange(
-                                'date_from',
-                                (e.target as HTMLInputElement).value,
-                            )
-                    "
-                />
-            </div>
-            <div class="space-y-1.5">
-                <Label for="date_to">Hasta</Label>
-                <Input
-                    id="date_to"
-                    type="date"
-                    :model-value="filters.date_to"
-                    @change="
-                        (e: Event) =>
-                            setCustomRange(
-                                'date_to',
-                                (e.target as HTMLInputElement).value,
-                            )
-                    "
-                />
-            </div>
-
-            <div class="w-48 space-y-1.5">
-                <Label>Sucursal</Label>
-                <Select
-                    :model-value="
-                        filters.branch_id ? String(filters.branch_id) : ''
-                    "
-                    @update:model-value="
-                        (v) => apply({ branch_id: v ? String(v) : undefined })
-                    "
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder="Todas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="">Todas</SelectItem>
-                        <SelectItem
-                            v-for="option in branchOptions"
-                            :key="option.id"
-                            :value="String(option.id)"
-                        >
-                            {{ option.name }}
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            <div class="w-48 space-y-1.5">
-                <Label>Caja</Label>
-                <Select
-                    :model-value="
-                        filters.register_id ? String(filters.register_id) : ''
-                    "
-                    @update:model-value="
-                        (v) => apply({ register_id: v ? String(v) : undefined })
-                    "
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder="Todas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="">Todas</SelectItem>
-                        <SelectItem
-                            v-for="option in registerOptions"
-                            :key="option.id"
-                            :value="String(option.id)"
-                        >
-                            {{ option.name }}
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            <div class="w-48 space-y-1.5">
-                <Label>Cajero</Label>
-                <Select
-                    :model-value="
-                        filters.cashier_id ? String(filters.cashier_id) : ''
-                    "
-                    @update:model-value="
-                        (v) => apply({ cashier_id: v ? String(v) : undefined })
-                    "
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="">Todos</SelectItem>
-                        <SelectItem
-                            v-for="option in cashierOptions"
-                            :key="option.id"
-                            :value="String(option.id)"
-                        >
-                            {{ option.name }}
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <MetricCard
+                :icon="ReceiptIcon"
+                label="Ventas netas"
+                :value="formatCurrency(metrics.sales_total)"
+                :comparison="metrics.comparison.sales_total"
+                :trend="salesTrend"
+                tooltip="Suma de ventas completadas en el período, sin cancelaciones."
+            />
+            <MetricCard
+                :icon="TicketIcon"
+                label="Tickets"
+                :value="String(metrics.sales_count)"
+                :comparison="metrics.comparison.sales_count"
+                tooltip="Número de ventas completadas en el período."
+            />
+            <MetricCard
+                :icon="TicketIcon"
+                label="Ticket promedio"
+                :value="formatCurrency(metrics.ticket_average)"
+                :comparison="metrics.comparison.ticket_average"
+                tooltip="Ventas netas entre número de tickets."
+            />
+            <MetricCard
+                v-if="metrics.profit_total !== null"
+                :icon="TrendingUpIcon"
+                label="Utilidad"
+                :value="formatCurrency(metrics.profit_total)"
+                :comparison="metrics.comparison.profit_total"
+                tooltip="Ventas menos costo de los productos vendidos."
+            />
         </div>
 
-        <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <ReceiptIcon class="size-4" /> Ventas
-                </div>
-                <p class="mt-1 text-2xl font-bold">
-                    {{ formatCurrency(metrics.sales_total) }}
-                </p>
-                <p
-                    v-if="comparisonLabel(metrics.comparison.sales_total)"
-                    class="flex items-center gap-1 text-xs text-muted-foreground"
-                >
-                    <component
-                        :is="
-                            (metrics.comparison.sales_total ?? 0) >= 0
-                                ? TrendingUpIcon
-                                : TrendingDownIcon
+        <ChartCard
+            title="Ventas en el tiempo"
+            :empty="metrics.sales_over_time.every((d) => Number(d.total) === 0)"
+        >
+            <template #actions>
+                <div class="flex gap-1 rounded-md border p-0.5">
+                    <Button
+                        v-for="option in granularityOptions"
+                        :key="option.value"
+                        size="xs"
+                        :variant="
+                            filters.granularity === option.value
+                                ? 'default'
+                                : 'ghost'
                         "
-                        class="size-3"
-                    />
-                    {{ comparisonLabel(metrics.comparison.sales_total) }}
-                </p>
-            </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <TicketIcon class="size-4" /> Tickets
+                        @click="apply({ granularity: option.value })"
+                    >
+                        {{ option.label }}
+                    </Button>
                 </div>
-                <p class="mt-1 text-2xl font-bold">{{ metrics.sales_count }}</p>
-                <p
-                    v-if="comparisonLabel(metrics.comparison.sales_count)"
-                    class="text-xs text-muted-foreground"
-                >
-                    {{ comparisonLabel(metrics.comparison.sales_count) }}
-                </p>
-            </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <TicketIcon class="size-4" /> Ticket promedio
-                </div>
-                <p class="mt-1 text-2xl font-bold">
-                    {{ formatCurrency(metrics.ticket_average) }}
-                </p>
-            </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <PercentIcon class="size-4" /> Descuentos
-                </div>
-                <p class="mt-1 text-2xl font-bold">
-                    {{ formatCurrency(metrics.discount_total) }}
-                </p>
-            </div>
-            <div
-                v-if="metrics.profit_total !== null"
-                class="rounded-xl border p-4"
+            </template>
+            <Line :data="salesOverTimeChart" :options="chartOptions" />
+        </ChartCard>
+
+        <div class="grid gap-4 lg:grid-cols-2">
+            <ChartCard
+                title="Métodos de pago"
+                :empty="metrics.payment_method_breakdown.length === 0"
             >
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <TrendingUpIcon class="size-4" /> Utilidad
+                <Doughnut
+                    :data="paymentChart"
+                    :options="{ responsive: true, maintainAspectRatio: false }"
+                />
+            </ChartCard>
+            <ChartCard
+                title="Productos más vendidos"
+                :empty="metrics.top_products.length === 0"
+            >
+                <Bar :data="topProductsChart" :options="horizontalBarOptions" />
+            </ChartCard>
+            <ChartCard
+                title="Categorías más vendidas"
+                :empty="metrics.top_categories.length === 0"
+            >
+                <Bar :data="topCategoriesChart" :options="chartOptions" />
+            </ChartCard>
+            <ChartCard
+                title="Ventas por sucursal"
+                :empty="metrics.sales_by_branch.length === 0"
+            >
+                <Bar :data="branchChart" :options="chartOptions" />
+            </ChartCard>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+            <div class="rounded-xl border bg-card p-4">
+                <div
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                    <WalletIcon class="size-4" /> Mi caja
                 </div>
-                <p class="mt-1 text-2xl font-bold">
-                    {{ formatCurrency(metrics.profit_total) }}
+                <p
+                    class="mt-1 text-lg font-bold"
+                    :class="
+                        metrics.cash_session_open
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-muted-foreground'
+                    "
+                >
+                    {{ metrics.cash_session_open ? 'Abierta' : 'Cerrada' }}
                 </p>
             </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <BanknoteIcon class="size-4" /> Efectivo
-                </div>
-                <p class="mt-1 text-2xl font-bold">
-                    {{ formatCurrency(metrics.cash_income) }}
-                </p>
-            </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <CreditCardIcon class="size-4" /> Tarjeta
-                </div>
-                <p class="mt-1 text-2xl font-bold">
-                    {{ formatCurrency(metrics.card_income) }}
-                </p>
-            </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <PackageIcon class="size-4" /> Productos vendidos
-                </div>
-                <p class="mt-1 text-2xl font-bold">
-                    {{ formatQuantity(metrics.products_sold) }}
-                </p>
-            </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <ScaleIcon class="size-4" /> Efectivo esperado
-                </div>
-                <p class="mt-1 text-2xl font-bold">
-                    {{ formatCurrency(metrics.expected_cash) }}
-                </p>
-            </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
+            <div class="rounded-xl border bg-card p-4">
+                <div
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
+                >
                     <ScaleIcon class="size-4" /> Diferencia de caja
                 </div>
                 <p
-                    class="mt-1 text-2xl font-bold"
+                    class="mt-1 text-lg font-bold"
                     :class="
                         Number(metrics.cash_difference) === 0
                             ? ''
@@ -480,130 +351,95 @@ function comparisonLabel(value: number | null): string | null {
                     {{ formatCurrency(metrics.cash_difference) }}
                 </p>
             </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <WalletIcon class="size-4" /> Mi caja
-                </div>
-                <p
-                    class="mt-1 text-2xl font-bold"
-                    :class="
-                        metrics.cash_session_open
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-muted-foreground'
-                    "
+            <div class="rounded-xl border bg-card p-4">
+                <div
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
                 >
-                    {{ metrics.cash_session_open ? 'Abierta' : 'Cerrada' }}
-                </p>
-            </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
-                    <TrendingUpIcon class="size-4" /> Stock bajo
-                </div>
-                <p class="mt-1 text-2xl font-bold">
-                    {{ metrics.low_stock_count }}
-                </p>
-            </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
                     <XCircleIcon class="size-4" /> Canceladas
                 </div>
-                <p class="mt-1 text-2xl font-bold">
+                <p class="mt-1 text-lg font-bold">
                     {{ metrics.cancelled_count }}
                 </p>
             </div>
-            <div class="rounded-xl border p-4">
-                <div class="flex items-center gap-2 text-muted-foreground">
+            <div class="rounded-xl border bg-card p-4">
+                <div
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
+                >
                     <RotateCcwIcon class="size-4" /> Devoluciones
                 </div>
-                <p class="mt-1 text-2xl font-bold">
+                <p class="mt-1 text-lg font-bold">
                     {{ metrics.returns_count }}
+                </p>
+            </div>
+            <div class="rounded-xl border bg-card p-4">
+                <div
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                    <PackageIcon class="size-4" /> Stock bajo
+                </div>
+                <p class="mt-1 text-lg font-bold">
+                    {{ metrics.low_stock_count }}
+                </p>
+            </div>
+            <div class="rounded-xl border bg-card p-4">
+                <div
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                    <AlertTriangleIcon class="size-4" /> Por caducar
+                </div>
+                <p
+                    class="mt-1 text-lg font-bold"
+                    :class="
+                        metrics.expiring_lots_count > 0
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : ''
+                    "
+                >
+                    {{ metrics.expiring_lots_count }}
                 </p>
             </div>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-2">
-            <div class="rounded-xl border p-4">
-                <p class="mb-2 text-sm font-medium">Ventas en el tiempo</p>
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div class="rounded-xl border bg-card p-4">
                 <div
-                    v-if="metrics.sales_over_time.length === 0"
-                    class="flex h-64 items-center justify-center"
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
                 >
-                    <EmptyState title="Sin ventas en el período" />
+                    <BanknoteIcon class="size-4" /> Efectivo
                 </div>
-                <div v-else class="h-64">
-                    <Line :data="salesOverTimeChart" :options="chartOptions" />
-                </div>
-            </div>
-            <div class="rounded-xl border p-4">
-                <p class="mb-2 text-sm font-medium">
-                    Ticket promedio en el tiempo
+                <p class="mt-1 text-lg font-bold">
+                    {{ formatCurrency(metrics.cash_income) }}
                 </p>
-                <div
-                    v-if="metrics.sales_over_time.length === 0"
-                    class="flex h-64 items-center justify-center"
-                >
-                    <EmptyState title="Sin ventas en el período" />
-                </div>
-                <div v-else class="h-64">
-                    <Line :data="ticketAverageChart" :options="chartOptions" />
-                </div>
             </div>
-            <div class="rounded-xl border p-4">
-                <p class="mb-2 text-sm font-medium">Ventas por sucursal</p>
+            <div class="rounded-xl border bg-card p-4">
                 <div
-                    v-if="metrics.sales_by_branch.length === 0"
-                    class="flex h-64 items-center justify-center"
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
                 >
-                    <EmptyState title="Sin ventas en el período" />
+                    <BanknoteIcon class="size-4" /> Tarjeta
                 </div>
-                <div v-else class="h-64">
-                    <Bar :data="branchChart" :options="chartOptions" />
-                </div>
+                <p class="mt-1 text-lg font-bold">
+                    {{ formatCurrency(metrics.card_income) }}
+                </p>
             </div>
-            <div class="rounded-xl border p-4">
-                <p class="mb-2 text-sm font-medium">Métodos de pago</p>
+            <div class="rounded-xl border bg-card p-4">
                 <div
-                    v-if="metrics.payment_method_breakdown.length === 0"
-                    class="flex h-64 items-center justify-center"
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
                 >
-                    <EmptyState title="Sin pagos en el período" />
+                    <PackageIcon class="size-4" /> Productos vendidos
                 </div>
-                <div v-else class="h-64">
-                    <Doughnut
-                        :data="paymentChart"
-                        :options="{
-                            responsive: true,
-                            maintainAspectRatio: false,
-                        }"
-                    />
-                </div>
+                <p class="mt-1 text-lg font-bold">
+                    {{ formatQuantity(metrics.products_sold) }}
+                </p>
             </div>
-            <div class="rounded-xl border p-4">
-                <p class="mb-2 text-sm font-medium">Productos más vendidos</p>
+            <div class="rounded-xl border bg-card p-4">
                 <div
-                    v-if="metrics.top_products.length === 0"
-                    class="flex h-64 items-center justify-center"
+                    class="flex items-center gap-2 text-sm text-muted-foreground"
                 >
-                    <EmptyState title="Sin ventas en el período" />
+                    <ScaleIcon class="size-4" /> Descuentos
                 </div>
-                <div v-else class="h-64">
-                    <Bar
-                        :data="topProductsChart"
-                        :options="horizontalBarOptions"
-                    />
-                </div>
-            </div>
-            <div class="rounded-xl border p-4">
-                <p class="mb-2 text-sm font-medium">Categorías más vendidas</p>
-                <div
-                    v-if="metrics.top_categories.length === 0"
-                    class="flex h-64 items-center justify-center"
-                >
-                    <EmptyState title="Sin ventas en el período" />
-                </div>
-                <div v-else class="h-64">
-                    <Bar :data="topCategoriesChart" :options="chartOptions" />
-                </div>
+                <p class="mt-1 text-lg font-bold">
+                    {{ formatCurrency(metrics.discount_total) }}
+                </p>
             </div>
         </div>
     </div>

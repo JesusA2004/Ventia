@@ -36,12 +36,17 @@ class DashboardController extends Controller
             'cashier_id' => $request->integer('cashier_id') ?: null,
         ];
 
+        $granularity = in_array($request->string('granularity')->toString(), ['hour', 'day', 'week'], true)
+            ? $request->string('granularity')->toString()
+            : 'day';
+
         return Inertia::render('Dashboard', [
-            'metrics' => $this->metrics->build($user, $from, $to, $filters),
+            'metrics' => $this->metrics->build($user, $from, $to, $filters, $granularity),
             'filters' => [
                 'preset' => $preset,
                 'date_from' => $from->toDateString(),
                 'date_to' => $to->toDateString(),
+                'granularity' => $granularity,
                 ...$filters,
             ],
             'branchOptions' => BranchResource::collection(Branch::query()->orderBy('name')->get()),

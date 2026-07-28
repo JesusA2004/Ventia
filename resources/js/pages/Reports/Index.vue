@@ -1,17 +1,10 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { DownloadIcon } from '@lucide/vue';
+import DateRangePicker from '@/components/filters/DateRangePicker.vue';
+import SearchableSelect from '@/components/forms/SearchableSelect.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -104,59 +97,33 @@ function apply(partial: Record<string, string | number | undefined>) {
         </Tabs>
 
         <div class="flex flex-wrap items-end gap-3">
-            <div class="space-y-1.5">
-                <Label for="date_from">Desde</Label>
-                <Input
-                    id="date_from"
-                    type="date"
-                    :model-value="filters.date_from"
-                    @change="
-                        (e: Event) =>
-                            apply({
-                                date_from: (e.target as HTMLInputElement).value,
-                            })
-                    "
-                />
-            </div>
-            <div class="space-y-1.5">
-                <Label for="date_to">Hasta</Label>
-                <Input
-                    id="date_to"
-                    type="date"
-                    :model-value="filters.date_to"
-                    @change="
-                        (e: Event) =>
-                            apply({
-                                date_to: (e.target as HTMLInputElement).value,
-                            })
-                    "
-                />
-            </div>
-            <div class="w-56 space-y-1.5">
-                <Label>Sucursal</Label>
-                <Select
-                    :model-value="
-                        filters.branch_id ? String(filters.branch_id) : ''
-                    "
-                    @update:model-value="
-                        (v) => apply({ branch_id: v ? String(v) : undefined })
-                    "
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder="Todas las sucursales" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="">Todas las sucursales</SelectItem>
-                        <SelectItem
-                            v-for="option in branchOptions"
-                            :key="option.id"
-                            :value="String(option.id)"
-                        >
-                            {{ option.name }}
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+            <DateRangePicker
+                :model-value="{
+                    preset: 'custom',
+                    date_from: filters.date_from,
+                    date_to: filters.date_to,
+                }"
+                @update:model-value="
+                    (v) => apply({ date_from: v.date_from, date_to: v.date_to })
+                "
+            />
+            <SearchableSelect
+                class="w-56"
+                :model-value="
+                    filters.branch_id ? String(filters.branch_id) : null
+                "
+                :options="
+                    branchOptions.map((b) => ({
+                        value: String(b.id),
+                        label: b.name,
+                    }))
+                "
+                placeholder="Todas las sucursales"
+                all-label="Todas las sucursales"
+                @update:model-value="
+                    (v) => apply({ branch_id: v ?? undefined })
+                "
+            />
         </div>
 
         <div

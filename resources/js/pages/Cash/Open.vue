@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { LockKeyholeIcon } from '@lucide/vue';
+import EmptyState from '@/components/EmptyState.vue';
+import AppAlert from '@/components/feedback/AppAlert.vue';
 import FormField from '@/components/forms/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
@@ -13,7 +15,9 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { usePermissions } from '@/composables/usePermissions';
 import cash from '@/routes/cash';
+import { create as createRegister } from '@/routes/settings/registers';
 
 defineProps<{
     registerOptions: {
@@ -23,6 +27,8 @@ defineProps<{
         branch_name: string;
     }[];
 }>();
+
+const { can } = usePermissions();
 
 defineOptions({
     layout: {
@@ -52,7 +58,30 @@ function submit() {
             class="text-center"
         />
 
+        <AppAlert v-if="registerOptions.length" variant="info" class="w-full">
+            Para acceder al punto de venta primero selecciona una caja y
+            registra el fondo inicial.
+        </AppAlert>
+
+        <div
+            v-if="!registerOptions.length"
+            class="w-full rounded-xl border p-6"
+        >
+            <EmptyState
+                :icon="LockKeyholeIcon"
+                title="No hay cajas configuradas"
+                description="Un administrador debe crear una caja antes de poder abrir un turno."
+            >
+                <template v-if="can('registers.manage')" #action>
+                    <Button as-child>
+                        <Link :href="createRegister().url">Crear caja</Link>
+                    </Button>
+                </template>
+            </EmptyState>
+        </div>
+
         <form
+            v-else
             class="w-full space-y-4 rounded-xl border p-6"
             @submit.prevent="submit"
         >
@@ -112,7 +141,11 @@ function submit() {
                 size="lg"
                 :disabled="form.processing"
             >
-                {{ form.processing ? 'Abriendo caja...' : 'Abrir caja' }}
+                {{
+                    form.processing
+                        ? 'Abriendo caja...'
+                        : 'Abrir caja y continuar al punto de venta'
+                }}
             </Button>
         </form>
     </div>

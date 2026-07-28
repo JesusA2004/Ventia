@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Enums\CashSessionStatus;
 use App\Enums\PaymentMethodType;
 use App\Enums\SaleStatus;
+use App\Enums\Status;
 use App\Models\CashSession;
 use App\Models\InventoryBalance;
+use App\Models\ProductLot;
 use App\Models\Sale;
 use App\Models\SaleReturn;
 use App\Models\User;
@@ -22,11 +24,13 @@ use Illuminate\Support\Facades\DB;
  */
 class DashboardMetricsService
 {
+    public function __construct(private readonly SettingsService $settings) {}
+
     /**
      * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
      * @return array<string, mixed>
      */
-    public function build(User $user, Carbon $from, Carbon $to, array $filters): array
+    public function build(User $user, Carbon $from, Carbon $to, array $filters, string $granularity = 'day'): array
     {
         $current = $this->periodTotals($user, $from, $to, $filters);
 
@@ -44,6 +48,8 @@ class DashboardMetricsService
             ->distinct()
             ->count();
 
+        $expiringLotsCount = $this->expiringLotsCount($user);
+
         return [
             'sales_count' => $current['sales_count'],
             'sales_total' => number_format($current['sales_total'], 2, '.', ''),
@@ -59,12 +65,16 @@ class DashboardMetricsService
             'cash_difference' => number_format($current['cash_difference'], 2, '.', ''),
             'cash_session_open' => CashSession::query()->where('user_id', $user->id)->where('status', CashSessionStatus::Open)->exists(),
             'low_stock_count' => $lowStockCount,
+            'expiring_lots_count' => $expiringLotsCount,
             'comparison' => [
                 'sales_total' => $this->percentChange($previous['sales_total'], $current['sales_total']),
                 'sales_count' => $this->percentChange($previous['sales_count'], $current['sales_count']),
                 'ticket_average' => $this->percentChange($previous['ticket_average'], $current['ticket_average']),
+                'profit_total' => $user->can('products.view-costs')
+                    ? $this->percentChange($previous['profit_total'], $current['profit_total'])
+                    : null,
             ],
-            'sales_over_time' => $this->salesOverTime($user, $from, $to, $filters),
+            'sales_over_time' => $this->salesOverTime($user, $from, $to, $filters, $granularity),
             'sales_by_branch' => $this->salesByBranch($user, $from, $to, $filters),
             'payment_method_breakdown' => $this->paymentMethodBreakdown($user, $from, $to, $filters),
             'top_products' => $this->topProducts($user, $from, $to, $filters),
@@ -151,32 +161,82 @@ class DashboardMetricsService
      * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
      * @return list<array{date: string, total: string, tickets: int}>
      */
-    private function salesOverTime(User $user, Carbon $from, Carbon $to, array $filters): array
+    /**
+     * @param  array{branch_id: int|null, register_id: int|null, cashier_id: int|null}  $filters
+     * @return list<array{date: string, total: string, tickets: int}>
+     */
+    private function salesOverTime(User $user, Carbon $from, Carbon $to, array $filters, string $granularity): array
     {
+        // "Por hora" over a long range would generate thousands of buckets
+        // for no readable benefit — fall back to daily once the range is
+        // wider than a few days rather than let the client request a huge
+        // payload.
+        if ($granularity === 'hour' && $from->diffInHours($to) > 24 * 3) {
+            $granularity = 'day';
+        }
+
         $rows = $this->salesQuery($user, $from, $to, $filters)
             ->where('sales.status', SaleStatus::Completed)
             ->get(['completed_at', 'total']);
 
-        $days = [];
+        $buckets = [];
         foreach ($rows as $row) {
-            $day = $row->completed_at->toDateString();
-            $days[$day]['total'] = bcadd($days[$day]['total'] ?? '0.0000', (string) $row->total, 4);
-            $days[$day]['tickets'] = ($days[$day]['tickets'] ?? 0) + 1;
+            $key = $this->bucketKey($row->completed_at, $granularity);
+            $buckets[$key]['total'] = bcadd($buckets[$key]['total'] ?? '0.0000', (string) $row->total, 4);
+            $buckets[$key]['tickets'] = ($buckets[$key]['tickets'] ?? 0) + 1;
         }
 
         $result = [];
-        $cursor = $from->copy()->startOfDay();
+        $cursor = match ($granularity) {
+            'hour' => $from->copy()->startOfHour(),
+            'week' => $from->copy()->startOfWeek(),
+            default => $from->copy()->startOfDay(),
+        };
+
         while ($cursor->lte($to)) {
-            $date = $cursor->toDateString();
+            $key = $this->bucketKey($cursor, $granularity);
             $result[] = [
-                'date' => $date,
-                'total' => number_format((float) ($days[$date]['total'] ?? 0), 2, '.', ''),
-                'tickets' => $days[$date]['tickets'] ?? 0,
+                'date' => $key,
+                'total' => number_format((float) ($buckets[$key]['total'] ?? 0), 2, '.', ''),
+                'tickets' => $buckets[$key]['tickets'] ?? 0,
             ];
-            $cursor->addDay();
+            $cursor = match ($granularity) {
+                'hour' => $cursor->addHour(),
+                'week' => $cursor->addWeek(),
+                default => $cursor->addDay(),
+            };
         }
 
         return $result;
+    }
+
+    private function bucketKey(Carbon $moment, string $granularity): string
+    {
+        return match ($granularity) {
+            'hour' => $moment->format('Y-m-d H:00'),
+            'week' => $moment->copy()->startOfWeek()->toDateString(),
+            default => $moment->toDateString(),
+        };
+    }
+
+    private function expiringLotsCount(User $user): int
+    {
+        $companyId = $user->company_id;
+
+        if ($companyId === null) {
+            return 0;
+        }
+
+        $alertDays = (int) ($this->settings->get($companyId, 'expiry_alert_days') ?? 30);
+
+        // ProductLot has no branch_id of its own (lots are a company-wide
+        // catalog concept; branch-level location lives on inventory
+        // balances/movements), so this count is company-scoped only.
+        return ProductLot::query()
+            ->where('status', Status::Active)
+            ->whereNotNull('expiration_date')
+            ->whereBetween('expiration_date', [now(), now()->addDays($alertDays)])
+            ->count();
     }
 
     /**

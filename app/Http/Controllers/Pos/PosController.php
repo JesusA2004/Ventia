@@ -48,6 +48,8 @@ class PosController extends Controller
         $requiresOpenRegister = (bool) ($this->settings->get($companyId, 'require_open_register') ?? true);
 
         if ($session === null && $requiresOpenRegister) {
+            Inertia::flash('toast', ['type' => 'warning', 'message' => 'Necesitas abrir una caja antes de iniciar ventas.']);
+
             return to_route('cash.sessions.create');
         }
 

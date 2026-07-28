@@ -113,12 +113,29 @@ function toNumber(value: number | string | null | undefined): number | null {
     return Number.isFinite(parsed) ? parsed : null;
 }
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
 function toDate(value: string | Date | null | undefined): Date | null {
     if (!value) {
         return null;
     }
 
-    const date = value instanceof Date ? value : new Date(value);
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    // A bare "YYYY-MM-DD" is a calendar date, not an instant — parsing it
+    // with `new Date(string)` reads it as UTC midnight, which shifts to the
+    // previous day once formatted in any negative-UTC-offset timezone (e.g.
+    // Mexico). Building the Date from local components avoids that shift.
+    if (DATE_ONLY.test(value)) {
+        const [year, month, day] = value.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const date = new Date(value);
 
     return Number.isNaN(date.getTime()) ? null : date;
 }

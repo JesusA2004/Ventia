@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
     formatBooleanLabel,
     formatCurrency,
@@ -54,6 +54,17 @@ describe('formatDate / formatDateTime', () => {
     it('formats a valid date without throwing', () => {
         expect(formatDate('2026-07-24T10:00:00Z')).not.toBe('—');
         expect(formatDateTime('2026-07-24T10:00:00Z')).not.toBe('—');
+    });
+
+    it('parses a bare YYYY-MM-DD as a local calendar date, never shifting a day back in negative-UTC-offset zones', () => {
+        vi.stubEnv('TZ', 'America/Mexico_City');
+
+        expect(formatDate('2026-07-28')).toContain('28');
+        expect(formatDate('2026-07-28')).not.toContain('27');
+    });
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
     });
 });
 

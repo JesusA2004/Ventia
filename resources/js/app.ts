@@ -4,7 +4,7 @@ import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { initializeFlashToast } from '@/lib/flashToast';
+import { initializeErrorToasts, initializeFlashToast } from '@/lib/flashToast';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Ventia';
 const pinia = createPinia();
@@ -36,3 +36,6 @@ initializeTheme();
 
 // This will listen for flash toast data from the server...
 initializeFlashToast();
+
+// This will show a toast instead of failing silently on a server/network error...
+initializeErrorToasts();

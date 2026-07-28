@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
             ProductCatalogSeeder::class,
             PaymentMethodSeeder::class,
             CustomerSeeder::class,
+            BranchExpansionSeeder::class,
+            OperationsActivitySeeder::class,
         ]);
     }
 }
