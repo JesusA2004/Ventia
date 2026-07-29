@@ -297,6 +297,33 @@ test('supervisors can list pending handovers scoped to their company', function 
         );
 });
 
+test('repeated supervisor validation attempts are rate limited', function () {
+    $fixture = posFixture();
+    enableCashHandoverRequired($fixture['company']->id);
+    $session = openPosSession($fixture['register'], $fixture['cashier'], '500');
+
+    $this->actingAs($fixture['cashier'])->post(route('cash.sessions.handover.store', $session), [
+        'denominations' => denominationLines('500'),
+    ]);
+    $handover = CashHandover::where('cash_session_id', $session->id)->firstOrFail();
+
+    for ($i = 0; $i < 6; $i++) {
+        $this->actingAs($fixture['cashier'])->post(route('cash.handovers.resolve', $handover), [
+            'decision' => 'approve',
+            'supervisor_email' => $fixture['admin']->email,
+            'supervisor_password' => 'wrong-password',
+        ])->assertSessionHasErrors('supervisor_password');
+    }
+
+    $this->actingAs($fixture['cashier'])->post(route('cash.handovers.resolve', $handover), [
+        'decision' => 'approve',
+        'supervisor_email' => $fixture['admin']->email,
+        'supervisor_password' => 'wrong-password',
+    ])->assertStatus(429);
+
+    expect($handover->fresh()->status)->toBe(CashHandoverStatus::Pending);
+});
+
 test('a cashier without cash.approve-close or cash.receive-handover cannot list handovers', function () {
     $fixture = posFixture();
     enableCashHandoverRequired($fixture['company']->id);

@@ -17,6 +17,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { formatCurrency } from '@/lib/format';
 import sales from '@/routes/sales';
 import { useCartStore } from '@/stores/cart';
 import type { PaymentMethod, Sale } from '@/types';
@@ -166,13 +167,13 @@ async function submit() {
                 <div>
                     <p class="text-muted-foreground">Total</p>
                     <p class="text-lg font-bold">
-                        ${{ cart.estimatedTotal.toFixed(2) }}
+                        {{ formatCurrency(cart.estimatedTotal) }}
                     </p>
                 </div>
                 <div>
                     <p class="text-muted-foreground">Pagado</p>
                     <p class="text-lg font-bold">
-                        ${{ cart.paymentsTotal.toFixed(2) }}
+                        {{ formatCurrency(cart.paymentsTotal) }}
                     </p>
                 </div>
                 <div>
@@ -185,13 +186,13 @@ async function submit() {
                                 : 'text-green-600'
                         "
                     >
-                        ${{ cart.paymentsPending.toFixed(2) }}
+                        {{ formatCurrency(cart.paymentsPending) }}
                     </p>
                 </div>
                 <div>
                     <p class="text-muted-foreground">Cambio</p>
                     <p class="text-lg font-bold">
-                        ${{ cart.paymentsChange.toFixed(2) }}
+                        {{ formatCurrency(cart.paymentsChange) }}
                     </p>
                 </div>
             </div>
@@ -262,7 +263,7 @@ async function submit() {
                 >
                     <span>{{ payment.payment_method_name }}</span>
                     <span class="flex items-center gap-3">
-                        ${{ Number(payment.amount).toFixed(2) }}
+                        {{ formatCurrency(payment.amount) }}
                         <button
                             type="button"
                             class="text-xs text-destructive"

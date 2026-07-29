@@ -5,6 +5,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { formatCurrency } from '@/lib/format';
 import type { CartProduct } from '@/stores/cart';
 
 const open = defineModel<boolean>('open', { default: false });
@@ -55,7 +56,7 @@ function choose(variantId: number) {
                             >
                         </span>
                         <span class="text-sm">
-                            ${{ Number(variant.sale_price).toFixed(2) }}
+                            {{ formatCurrency(variant.sale_price) }}
                             <span class="block text-xs text-muted-foreground"
                                 >Stock: {{ variant.stock }}</span
                             >

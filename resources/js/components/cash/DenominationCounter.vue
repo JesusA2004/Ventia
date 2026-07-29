@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue';
 import { Input } from '@/components/ui/input';
+import { formatCurrency } from '@/lib/format';
 
 const DENOMINATIONS = [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1, 0.5];
 
@@ -39,15 +40,13 @@ defineExpose({ total, counts, lines });
                 min="0"
                 class="h-8 w-24 text-right"
             />
-            <span class="w-24 text-right text-sm"
-                >${{
-                    (denomination * (counts[denomination] || 0)).toFixed(2)
-                }}</span
-            >
+            <span class="w-24 text-right text-sm">{{
+                formatCurrency(denomination * (counts[denomination] || 0))
+            }}</span>
         </div>
         <div class="flex justify-between border-t pt-2 text-sm font-semibold">
             <span>Total contado</span>
-            <span>${{ total.toFixed(2) }}</span>
+            <span>{{ formatCurrency(total) }}</span>
         </div>
     </div>
 </template>

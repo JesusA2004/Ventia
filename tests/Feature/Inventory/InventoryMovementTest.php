@@ -115,6 +115,39 @@ test('a movement cannot mix a product and a warehouse from different companies',
     ]))->toThrow(InvalidArgumentException::class);
 });
 
+test('a stock adjustment rejects a fractional quantity for a non-fractional unit', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+    ['warehouse' => $warehouse, 'product' => $product, 'admin' => $admin] = makeInventoryFixture();
+
+    $this->actingAs($admin)->post(route('inventory.adjustments.store'), [
+        'warehouse_id' => $warehouse->id,
+        'product_id' => $product->id,
+        'movement_type' => 'adjustment_in',
+        'quantity' => '2.5',
+        'reason' => 'Entrada con decimales inválida',
+    ])->assertSessionHasErrors('quantity');
+
+    expect(InventoryMovement::count())->toBe(0);
+});
+
+test('a stock adjustment accepts a fractional quantity for a fractional unit', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+    ['company' => $company, 'warehouse' => $warehouse, 'admin' => $admin] = makeInventoryFixture();
+
+    $fractionalUnit = Unit::factory()->create(['company_id' => $company->id, 'allows_fraction' => true]);
+    $product = Product::factory()->create(['company_id' => $company->id, 'unit_id' => $fractionalUnit->id]);
+
+    $this->actingAs($admin)->post(route('inventory.adjustments.store'), [
+        'warehouse_id' => $warehouse->id,
+        'product_id' => $product->id,
+        'movement_type' => 'adjustment_in',
+        'quantity' => '2.5',
+        'reason' => 'Entrada fraccionable válida',
+    ])->assertSessionDoesntHaveErrors('quantity');
+
+    expect(InventoryMovement::count())->toBe(1);
+});
+
 test('a cajero cannot register a stock adjustment', function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     ['company' => $company, 'branch' => $branch, 'warehouse' => $warehouse, 'product' => $product] = makeInventoryFixture();

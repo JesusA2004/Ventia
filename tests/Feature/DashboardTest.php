@@ -3,6 +3,7 @@
 use App\Actions\Sales\CompleteSaleAction;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 test('guests are redirected to the login page', function () {
     $response = $this->get(route('dashboard'));
@@ -102,4 +103,47 @@ test('every dashboard preset and granularity combination renders without a 500, 
                 ->where('filters.granularity', $granularity)
                 ->has('metrics.sales_over_time'));
     }
+});
+
+/**
+ * Regression coverage for a timezone bug: DashboardController used to
+ * resolve "today" via Carbon::today() in the server's default timezone
+ * (UTC), ignoring Company::$timezone entirely. A sale completed late at
+ * night in the company's local timezone — but already past midnight in
+ * UTC — would silently disappear from the "today" preset until the UTC
+ * calendar day caught up.
+ */
+test('the "today" preset resolves against the company timezone, not UTC', function () {
+    $fixture = posFixture();
+    expect($fixture['company']->timezone)->toBe('America/Mexico_City');
+
+    // 23:30 in Mexico City is already 05:30 the next day in UTC — the exact
+    // boundary condition that exposes the bug.
+    $localMoment = Carbon::parse('2026-07-29 23:30:00', 'America/Mexico_City');
+    $this->travelTo($localMoment);
+
+    $this->actingAs($fixture['cashier']);
+    app(Request::class)->setUserResolver(fn () => $fixture['cashier']);
+
+    $session = openPosSession($fixture['register'], $fixture['cashier']);
+
+    app(CompleteSaleAction::class)->execute([
+        'branch_id' => $fixture['branch']->id,
+        'warehouse_id' => $fixture['warehouse']->id,
+        'register_id' => $fixture['register']->id,
+        'cash_session_id' => $session->id,
+        'customer_id' => $fixture['customer']->id,
+        'items' => [
+            ['product_id' => $fixture['product']->id, 'quantity' => '1'],
+        ],
+    ], [
+        ['payment_method_id' => $fixture['cash']->id, 'amount' => '100'],
+    ], $fixture['cashier']);
+
+    $this->actingAs($fixture['admin'])
+        ->get(route('dashboard', ['preset' => 'today']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.date_from', '2026-07-29')
+            ->where('metrics.sales_count', 1));
 });

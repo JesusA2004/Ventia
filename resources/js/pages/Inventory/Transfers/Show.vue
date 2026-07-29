@@ -14,6 +14,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { usePermissions } from '@/composables/usePermissions';
+import { formatQuantity } from '@/lib/format';
 import {
     approve,
     cancel,
@@ -132,12 +133,18 @@ function submitReceive() {
                                 </span>
                             </div>
                         </TableCell>
-                        <TableCell>{{ item.quantity_requested }}</TableCell>
                         <TableCell>{{
-                            item.quantity_shipped ?? '—'
+                            formatQuantity(item.quantity_requested)
                         }}</TableCell>
                         <TableCell>{{
-                            item.quantity_received ?? '—'
+                            item.quantity_shipped !== null
+                                ? formatQuantity(item.quantity_shipped)
+                                : '—'
+                        }}</TableCell>
+                        <TableCell>{{
+                            item.quantity_received !== null
+                                ? formatQuantity(item.quantity_received)
+                                : '—'
                         }}</TableCell>
                         <TableCell
                             v-if="

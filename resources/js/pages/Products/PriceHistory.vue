@@ -6,6 +6,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/format';
 import { index } from '@/routes/products';
 import type { Paginated, ProductPriceHistoryEntry } from '@/types';
 
@@ -63,16 +64,20 @@ function formatDate(value: string): string {
                 {{ formatDate(row.created_at) }}
             </template>
             <template #cell-old_price="{ row }">
-                {{ row.old_price ?? '—' }}
+                {{
+                    row.old_price !== null ? formatCurrency(row.old_price) : '—'
+                }}
             </template>
             <template #cell-new_price="{ row }">
-                {{ row.new_price ?? '—' }}
+                {{
+                    row.new_price !== null ? formatCurrency(row.new_price) : '—'
+                }}
             </template>
             <template #cell-old_cost="{ row }">
-                {{ row.old_cost ?? '—' }}
+                {{ row.old_cost !== null ? formatCurrency(row.old_cost) : '—' }}
             </template>
             <template #cell-new_cost="{ row }">
-                {{ row.new_cost ?? '—' }}
+                {{ row.new_cost !== null ? formatCurrency(row.new_cost) : '—' }}
             </template>
             <template #cell-percentage_change="{ row }">
                 <Badge

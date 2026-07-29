@@ -15,6 +15,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { formatCurrency, formatDateTime } from '@/lib/format';
 import salesRoutes from '@/routes/sales';
 import type { Paginated, Sale } from '@/types';
 
@@ -101,11 +102,7 @@ const statusVariant: Record<
                 />
             </template>
             <template #cell-created_at="{ row }">
-                {{
-                    row.created_at
-                        ? new Date(row.created_at).toLocaleString()
-                        : '—'
-                }}
+                {{ row.created_at ? formatDateTime(row.created_at) : '—' }}
             </template>
             <template #cell-status="{ row }">
                 <Badge :variant="statusVariant[row.status] ?? 'outline'">{{
@@ -117,7 +114,7 @@ const statusVariant: Record<
                     :href="salesRoutes.show.url(row.id)"
                     class="font-medium underline-offset-2 hover:underline"
                 >
-                    ${{ Number(row.total).toFixed(2) }}
+                    {{ formatCurrency(row.total) }}
                 </Link>
             </template>
         </ServerDataTable>

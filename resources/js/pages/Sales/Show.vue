@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
-import { formatCurrency, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDateTime, formatQuantity } from '@/lib/format';
 import sales from '@/routes/sales';
 import type { Sale } from '@/types';
 
@@ -255,7 +255,9 @@ const canReturn = ['completed', 'partially_returned'].includes(
                                 >{{ item.sku }}</span
                             >
                         </td>
-                        <td class="p-3 text-right">{{ item.quantity }}</td>
+                        <td class="p-3 text-right">
+                            {{ formatQuantity(item.quantity) }}
+                        </td>
                         <td class="p-3 text-right">
                             {{ formatCurrency(item.unit_price) }}
                         </td>

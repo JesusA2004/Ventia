@@ -14,6 +14,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { usePermissions } from '@/composables/usePermissions';
+import { formatQuantity } from '@/lib/format';
 import { apply, cancel, complete, index } from '@/routes/inventory/counts';
 import type { StockCount } from '@/types';
 
@@ -116,7 +117,9 @@ function cancelCount() {
                                 </span>
                             </div>
                         </TableCell>
-                        <TableCell>{{ item.expected_quantity }}</TableCell>
+                        <TableCell>{{
+                            formatQuantity(item.expected_quantity)
+                        }}</TableCell>
                         <TableCell>
                             <Input
                                 v-if="
@@ -130,7 +133,9 @@ function cancelCount() {
                                 class="w-28"
                             />
                             <span v-else>{{
-                                item.counted_quantity ?? '—'
+                                item.counted_quantity !== null
+                                    ? formatQuantity(item.counted_quantity)
+                                    : '—'
                             }}</span>
                         </TableCell>
                         <TableCell>
@@ -145,9 +150,13 @@ function cancelCount() {
                                         : 'destructive'
                                 "
                             >
-                                {{ item.difference }}
+                                {{ formatQuantity(item.difference) }}
                             </Badge>
-                            <span v-else>{{ item.difference ?? '—' }}</span>
+                            <span v-else>{{
+                                item.difference !== null
+                                    ? formatQuantity(item.difference)
+                                    : '—'
+                            }}</span>
                         </TableCell>
                     </TableRow>
                 </TableBody>

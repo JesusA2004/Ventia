@@ -13,6 +13,7 @@ use App\Models\Sale;
 use App\Models\SalePayment;
 use App\Models\SaleReturn;
 use App\Models\User;
+use App\Services\ActiveCompanyContext;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -29,6 +30,8 @@ use Inertia\Response;
 class ReportController extends Controller
 {
     private const TABS = ['summary', 'sales', 'cash', 'inventory'];
+
+    public function __construct(private readonly ActiveCompanyContext $activeCompany) {}
 
     public function index(Request $request): Response
     {
@@ -52,10 +55,10 @@ class ReportController extends Controller
             'branchOptions' => BranchResource::collection(Branch::query()->orderBy('name')->get()),
             'canViewProfit' => $user->can('products.view-costs'),
             'data' => match ($tab) {
-                'sales' => $this->salesData($user, $from, $to, $branchId),
-                'cash' => $this->cashData($user, $from, $to, $branchId),
+                'sales' => $this->salesData($user, $from->copy()->utc(), $to->copy()->utc(), $branchId),
+                'cash' => $this->cashData($user, $from->copy()->utc(), $to->copy()->utc(), $branchId),
                 'inventory' => $this->inventoryData($user, $branchId),
-                default => $this->summaryData($user, $from, $to, $branchId),
+                default => $this->summaryData($user, $from->copy()->utc(), $to->copy()->utc(), $branchId),
             },
         ]);
     }
@@ -69,6 +72,8 @@ class ReportController extends Controller
             ? $request->string('tab')->toString()
             : 'summary';
         [$from, $to] = $this->resolveDateRange($request);
+        $from = $from->copy()->utc();
+        $to = $to->copy()->utc();
         $branchId = $request->integer('branch_id') ?: null;
 
         $data = match ($tab) {
@@ -103,8 +108,13 @@ class ReportController extends Controller
     /** @return array{0: CarbonInterface, 1: CarbonInterface} */
     private function resolveDateRange(Request $request): array
     {
-        $from = $request->date('date_from') ?? Carbon::today()->startOfMonth();
-        $to = $request->date('date_to') ?? Carbon::today();
+        // Same rule as the dashboard: default/blank ranges must resolve to
+        // the company's local calendar day, not the server's UTC clock.
+        $activeCompany = $this->activeCompany->company();
+        $timezone = $activeCompany !== null ? $activeCompany->timezone : config('app.timezone');
+
+        $from = $request->date('date_from', null, $timezone) ?? Carbon::today($timezone)->startOfMonth();
+        $to = $request->date('date_to', null, $timezone) ?? Carbon::today($timezone);
 
         return [$from->startOfDay(), $to->copy()->endOfDay()];
     }

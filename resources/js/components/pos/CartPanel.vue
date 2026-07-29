@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
+import { formatCurrency } from '@/lib/format';
 import { useCartStore } from '@/stores/cart';
 import type { CashSession } from '@/types';
 
@@ -152,7 +153,7 @@ const canCheckout = computed(() => cart.lines.length > 0 && !props.processing);
                         </div>
                         <div class="text-right">
                             <p class="text-sm font-semibold">
-                                ${{ amountFor(line.key).toFixed(2) }}
+                                {{ formatCurrency(amountFor(line.key)) }}
                             </p>
                             <p
                                 v-if="line.discount_value"
@@ -209,7 +210,7 @@ const canCheckout = computed(() => cart.lines.length > 0 && !props.processing);
         <div class="space-y-1 rounded-lg border p-3 text-sm">
             <div class="flex justify-between">
                 <span class="text-muted-foreground">Subtotal</span>
-                <span>${{ cart.estimatedSubtotal.toFixed(2) }}</span>
+                <span>{{ formatCurrency(cart.estimatedSubtotal) }}</span>
             </div>
             <button
                 v-if="can('discounts.apply')"
@@ -218,11 +219,13 @@ const canCheckout = computed(() => cart.lines.length > 0 && !props.processing);
                 @click="emit('edit-general-discount')"
             >
                 <span>Descuento general</span>
-                <span>-${{ cart.estimatedGeneralDiscount.toFixed(2) }}</span>
+                <span
+                    >-{{ formatCurrency(cart.estimatedGeneralDiscount) }}</span
+                >
             </button>
             <div class="flex justify-between text-base font-bold">
                 <span>Total estimado</span>
-                <span>${{ cart.estimatedTotal.toFixed(2) }}</span>
+                <span>{{ formatCurrency(cart.estimatedTotal) }}</span>
             </div>
             <p class="text-xs text-muted-foreground">
                 El total final se calcula en el servidor al cobrar.

@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Enums\InventoryMovementType;
+use App\Models\Product;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -36,5 +38,30 @@ class StockAdjustmentRequest extends FormRequest
             'reason' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $productId = $this->input('product_id');
+            $quantity = $this->input('quantity');
+
+            if (! is_numeric($productId) || ! is_numeric($quantity)) {
+                return;
+            }
+
+            $product = Product::query()->with('unit')->find((int) $productId);
+
+            if ($product && ! $product->unit->allows_fraction && $this->hasFractionalPart((string) $quantity)) {
+                $validator->errors()->add('quantity', "El producto «{$product->name}» se vende por pieza y no admite cantidades decimales.");
+            }
+        });
+    }
+
+    private function hasFractionalPart(string $quantity): bool
+    {
+        $parts = explode('.', $quantity);
+
+        return isset($parts[1]) && rtrim($parts[1], '0') !== '';
     }
 }

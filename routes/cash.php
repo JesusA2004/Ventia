@@ -19,5 +19,7 @@ Route::middleware(['auth', 'verified'])->prefix('cash')->name('cash.')->group(fu
 
     Route::get('handovers', [CashHandoverController::class, 'index'])->name('handovers.index');
     Route::get('handovers/{cash_handover}', [CashHandoverController::class, 'show'])->name('handovers.show');
-    Route::post('handovers/{cash_handover}/resolve', [CashHandoverController::class, 'resolve'])->name('handovers.resolve');
+    Route::post('handovers/{cash_handover}/resolve', [CashHandoverController::class, 'resolve'])
+        ->middleware('throttle:6,1')
+        ->name('handovers.resolve');
 });

@@ -18,6 +18,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { usePermissions } from '@/composables/usePermissions';
+import { formatCurrency, formatQuantity } from '@/lib/format';
 import { create as createAdjustment } from '@/routes/inventory/adjustments';
 import { exportMethod as kardexExport, index } from '@/routes/inventory/kardex';
 import type {
@@ -187,13 +188,13 @@ function formatDate(value: string): string {
                 <p
                     class="text-lg font-semibold text-emerald-600 dark:text-emerald-400"
                 >
-                    {{ totals.in }}
+                    {{ formatQuantity(totals.in) }}
                 </p>
             </div>
             <div>
                 <p class="text-xs text-muted-foreground">Total salidas</p>
                 <p class="text-lg font-semibold text-red-600 dark:text-red-400">
-                    {{ totals.out }}
+                    {{ formatQuantity(totals.out) }}
                 </p>
             </div>
         </div>
@@ -223,6 +224,15 @@ function formatDate(value: string): string {
                 >
                     {{ row.direction === 'in' ? 'Entrada' : 'Salida' }}
                 </span>
+            </template>
+            <template #cell-quantity="{ row }">
+                {{ formatQuantity(row.quantity) }}
+            </template>
+            <template #cell-unit_cost="{ row }">
+                {{ formatCurrency(row.unit_cost) }}
+            </template>
+            <template #cell-resulting_stock="{ row }">
+                {{ formatQuantity(row.resulting_stock) }}
             </template>
             <template #cell-reason="{ row }">
                 {{ row.reason ?? '—' }}

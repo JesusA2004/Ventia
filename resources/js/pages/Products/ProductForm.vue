@@ -20,6 +20,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { formatCurrency } from '@/lib/format';
 import { priceHistory as priceHistoryRoute } from '@/routes/products';
 import type {
     Brand,
@@ -369,7 +370,11 @@ function submit() {
                                 Costo actual
                             </p>
                             <p class="text-lg font-semibold">
-                                {{ product.cost ?? '—' }}
+                                {{
+                                    product.cost !== undefined
+                                        ? formatCurrency(product.cost)
+                                        : '—'
+                                }}
                             </p>
                         </div>
                         <div>
@@ -377,7 +382,7 @@ function submit() {
                                 Precio de venta actual
                             </p>
                             <p class="text-lg font-semibold">
-                                {{ product.sale_price }}
+                                {{ formatCurrency(product.sale_price) }}
                             </p>
                         </div>
                         <div class="ml-auto flex gap-2">

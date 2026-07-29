@@ -9,6 +9,7 @@ import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
+import { formatCurrency, formatDateTime } from '@/lib/format';
 import cash from '@/routes/cash';
 import type { CashSession, Paginated } from '@/types';
 
@@ -63,7 +64,7 @@ const columns: DataTableColumn[] = [
                 />
             </template>
             <template #cell-opened_at="{ row }">
-                {{ new Date(row.opened_at).toLocaleString() }}
+                {{ formatDateTime(row.opened_at) }}
             </template>
             <template #cell-status="{ row }">
                 <Link :href="cash.sessions.show.url(row.id)">
@@ -89,7 +90,7 @@ const columns: DataTableColumn[] = [
                             : 'text-green-600'
                     "
                 >
-                    ${{ Number(row.difference).toFixed(2) }}
+                    {{ formatCurrency(row.difference) }}
                 </span>
                 <span v-else class="text-muted-foreground">—</span>
             </template>

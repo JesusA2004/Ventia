@@ -2,7 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
-import { formatCurrency, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDateTime, formatQuantity } from '@/lib/format';
 import type { Sale } from '@/types';
 
 type CompanyInfo = {
@@ -96,7 +96,7 @@ function printTicket() {
                         class="flex justify-between text-[10px] text-muted-foreground"
                     >
                         <span
-                            >{{ item.quantity }} x
+                            >{{ formatQuantity(item.quantity) }} x
                             {{ formatCurrency(item.unit_price) }}</span
                         >
                         <span v-if="Number(item.discount_amount) > 0"

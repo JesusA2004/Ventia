@@ -5,6 +5,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/lib/format';
 import pos from '@/routes/pos';
 import type { CartProduct } from '@/stores/cart';
 import type { Category } from '@/types';
@@ -194,9 +195,9 @@ defineExpose({ focusBarcode, focusSearch });
                         </p>
                     </div>
                     <div class="mt-2 flex items-center justify-between">
-                        <span class="font-semibold"
-                            >${{ Number(product.sale_price).toFixed(2) }}</span
-                        >
+                        <span class="font-semibold">{{
+                            formatCurrency(product.sale_price)
+                        }}</span>
                         <Badge
                             v-if="
                                 product.stock !== null &&

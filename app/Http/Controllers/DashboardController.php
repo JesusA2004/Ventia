@@ -7,6 +7,7 @@ use App\Http\Resources\CashRegisterResource;
 use App\Models\Branch;
 use App\Models\CashRegister;
 use App\Models\User;
+use App\Services\ActiveCompanyContext;
 use App\Services\DashboardMetricsService;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
@@ -18,7 +19,10 @@ class DashboardController extends Controller
 {
     private const PRESETS = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'custom'];
 
-    public function __construct(private readonly DashboardMetricsService $metrics) {}
+    public function __construct(
+        private readonly DashboardMetricsService $metrics,
+        private readonly ActiveCompanyContext $activeCompany,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -29,7 +33,19 @@ class DashboardController extends Controller
             ? $request->string('preset')->toString()
             : 'today';
 
-        [$from, $to] = $this->resolveRange($preset, $request->date('date_from'), $request->date('date_to'));
+        // "Today/this week/this month" must reflect the company's local
+        // calendar day, not the server's UTC clock — otherwise a sale made
+        // at 8pm in Mexico (already past midnight UTC) would fall outside
+        // "today" until the UTC day rolls over too.
+        $activeCompany = $this->activeCompany->company();
+        $timezone = $activeCompany !== null ? $activeCompany->timezone : config('app.timezone');
+
+        [$from, $to] = $this->resolveRange(
+            $preset,
+            $request->date('date_from', null, $timezone),
+            $request->date('date_to', null, $timezone),
+            $timezone,
+        );
 
         $filters = [
             'branch_id' => $request->integer('branch_id') ?: null,
@@ -42,7 +58,7 @@ class DashboardController extends Controller
             : 'day';
 
         return Inertia::render('Dashboard', [
-            'metrics' => $this->metrics->build($user, $from, $to, $filters, $granularity),
+            'metrics' => $this->metrics->build($user, $from->copy()->utc(), $to->copy()->utc(), $filters, $granularity),
             'filters' => [
                 'preset' => $preset,
                 'date_from' => $from->toDateString(),
@@ -71,9 +87,9 @@ class DashboardController extends Controller
      *
      * @return array{0: CarbonInterface, 1: CarbonInterface}
      */
-    private function resolveRange(string $preset, ?CarbonInterface $customFrom, ?CarbonInterface $customTo): array
+    private function resolveRange(string $preset, ?CarbonInterface $customFrom, ?CarbonInterface $customTo, string $timezone): array
     {
-        $today = Carbon::today();
+        $today = Carbon::today($timezone);
 
         return match ($preset) {
             'yesterday' => [$today->copy()->subDay(), $today->copy()->subDay()->endOfDay()],
