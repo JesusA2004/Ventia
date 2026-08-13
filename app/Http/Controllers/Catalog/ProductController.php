@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Catalog;
 use App\Actions\Products\CreateProductAction;
 use App\Actions\Products\DuplicateProductAction;
 use App\Actions\Products\UpdateProductAction;
+use App\Enums\TrackingType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\StoreProductRequest;
 use App\Http\Requests\Catalog\UpdateProductRequest;
@@ -21,6 +22,7 @@ use App\Models\ProductAttribute;
 use App\Models\Tax;
 use App\Models\Unit;
 use App\Services\ActiveCompanyContext;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -36,6 +38,7 @@ class ProductController extends Controller
         private readonly UpdateProductAction $updateProduct,
         private readonly DuplicateProductAction $duplicateProduct,
         private readonly ActiveCompanyContext $activeCompany,
+        private readonly AuditLogger $audit,
     ) {
         $this->authorizeResource(Product::class, 'product');
     }
@@ -71,7 +74,9 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request): RedirectResponse
     {
-        $this->createProduct->execute($request->validated(), $this->activeCompany->requireCompanyId());
+        $product = $this->createProduct->execute($request->validated(), $this->activeCompany->requireCompanyId());
+
+        $this->audit->log('products', 'created', "Creó el producto «{$product->name}» ({$product->sku}).", $product);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Producto creado correctamente.']);
 
@@ -90,7 +95,10 @@ class ProductController extends Controller
 
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
-        $this->updateProduct->execute($product, $request->validated());
+        $before = $product->only(['name', 'category_id', 'brand_id', 'status', 'visible_in_pos']);
+        $updated = $this->updateProduct->execute($product, $request->validated());
+
+        $this->audit->log('products', 'updated', "Actualizó el producto «{$updated->name}» ({$updated->sku}).", $updated, $before, $updated->only(['name', 'category_id', 'brand_id', 'status', 'visible_in_pos']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Producto actualizado correctamente.']);
 
@@ -137,14 +145,18 @@ class ProductController extends Controller
 
     /**
      * Lightweight product lookup shared by the inventory pickers (ajustes,
-     * transferencias, conteos): search by name/SKU/barcode, with variants
-     * eager loaded so the frontend can offer variant selection inline.
+     * transferencias, conteos, lotes): search by name/SKU/barcode, with
+     * variants eager loaded so the frontend can offer variant selection
+     * inline. When prioritize_lots=1 (used by the lot picker), products
+     * that actually track lots/caducidad are ranked first without hiding
+     * the rest, since a product's tracking policy can change later.
      */
     public function search(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Product::class);
 
         $search = $request->string('search')->toString();
+        $lotTrackingTypes = array_map(fn ($type) => $type->value, array_filter(TrackingType::cases(), fn ($type) => $type->usesLots()));
 
         $products = Product::query()
             ->with('variants')
@@ -154,10 +166,18 @@ class ProductController extends Controller
                 ->orWhere('sku', 'like', "%{$search}%")
                 ->orWhere('internal_code', 'like', "%{$search}%")
                 ->orWhereHas('barcodes', fn ($bq) => $bq->where('barcode', $search)))
+            ->when(
+                $request->boolean('prioritize_lots'),
+                fn ($query) => $query->orderByRaw(
+                    'CASE WHEN tracking_type IN ('.implode(',', array_fill(0, count($lotTrackingTypes), '?')).') THEN 0 ELSE 1 END',
+                    $lotTrackingTypes,
+                ),
+            )
+            ->orderBy('name')
             ->limit(15)
             ->get();
 
-        return response()->json(ProductResource::collection($products));
+        return response()->json(['data' => ProductResource::collection($products)]);
     }
 
     /**

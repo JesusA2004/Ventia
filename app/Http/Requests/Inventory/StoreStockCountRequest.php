@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests\Inventory;
 
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\StockCount;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreStockCountRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', StockCount::class);
@@ -18,7 +21,7 @@ class StoreStockCountRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         return [
             'warehouse_id' => ['required', Rule::exists('warehouses', 'id')->where('company_id', $companyId)],

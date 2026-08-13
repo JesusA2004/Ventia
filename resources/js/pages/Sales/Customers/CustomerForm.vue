@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import CustomerController from '@/actions/App/Http/Controllers/Sales/CustomerController';
+import FormCurrencyInput from '@/components/forms/FormCurrencyInput.vue';
 import FormField from '@/components/forms/FormField.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +14,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { PHONE_COUNTRY_CODES } from '@/lib/phone-codes';
 import type { Customer, PriceList } from '@/types';
 
 const props = defineProps<{
@@ -24,6 +27,7 @@ const form = useForm({
     name: props.customer?.name ?? '',
     legal_name: props.customer?.legal_name ?? '',
     tax_id: props.customer?.tax_id ?? '',
+    phone_country_code: props.customer?.phone_country_code ?? '+52',
     phone: props.customer?.phone ?? '',
     email: props.customer?.email ?? '',
     address: props.customer?.address ?? '',
@@ -31,6 +35,26 @@ const form = useForm({
     credit_limit: props.customer?.credit_limit ?? '0',
     notes: props.customer?.notes ?? '',
     status: props.customer?.status ?? 'active',
+});
+
+const defaultPriceList = computed(
+    () => props.priceListOptions.find((list) => list.is_default) ?? null,
+);
+
+const rfcMaxLength = computed(() =>
+    form.customer_type === 'business' ? 12 : 13,
+);
+
+const rfcHelp = computed(() => {
+    if (form.customer_type === 'business') {
+        return 'RFC de persona moral: 12 caracteres.';
+    }
+
+    if (form.customer_type === 'individual') {
+        return 'RFC de persona física: 13 caracteres.';
+    }
+
+    return null;
 });
 
 function submit() {
@@ -81,11 +105,48 @@ function submit() {
             >
                 <Input id="legal_name" v-model="form.legal_name" />
             </FormField>
-            <FormField label="RFC" for="tax_id" :error="form.errors.tax_id">
-                <Input id="tax_id" v-model="form.tax_id" />
+            <FormField
+                label="RFC"
+                for="tax_id"
+                :error="form.errors.tax_id"
+                :tooltip="rfcHelp ?? undefined"
+            >
+                <Input
+                    id="tax_id"
+                    v-model="form.tax_id"
+                    :maxlength="rfcMaxLength"
+                    class="uppercase"
+                    placeholder="XAXX010101000"
+                />
             </FormField>
-            <FormField label="Teléfono" for="phone" :error="form.errors.phone">
-                <Input id="phone" v-model="form.phone" />
+            <FormField
+                label="Teléfono"
+                for="phone"
+                :error="form.errors.phone ?? form.errors.phone_country_code"
+            >
+                <div class="flex gap-2">
+                    <Select v-model="form.phone_country_code">
+                        <SelectTrigger id="phone_country_code" class="w-32">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                v-for="code in PHONE_COUNTRY_CODES"
+                                :key="code.value"
+                                :value="code.value"
+                            >
+                                {{ code.value }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Input
+                        id="phone"
+                        v-model="form.phone"
+                        inputmode="numeric"
+                        placeholder="7771234567"
+                        class="flex-1"
+                    />
+                </div>
             </FormField>
             <FormField label="Correo" for="email" :error="form.errors.email">
                 <Input id="email" v-model="form.email" type="email" />
@@ -94,40 +155,42 @@ function submit() {
                 label="Lista de precios"
                 for="price_list_id"
                 :error="form.errors.price_list_id"
+                tooltip="Si no eliges una lista, se usa el precio base del producto (o la lista predeterminada de la empresa, si existe)."
             >
                 <Select v-model="form.price_list_id">
                     <SelectTrigger id="price_list_id" class="w-full">
-                        <SelectValue
-                            placeholder="Lista general (por defecto)"
-                        />
+                        <SelectValue placeholder="Precio base del producto" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem :value="null"
-                            >Lista general (por defecto)</SelectItem
-                        >
+                        <SelectItem :value="null">
+                            Precio base del producto (sin lista específica)
+                        </SelectItem>
                         <SelectItem
                             v-for="option in priceListOptions"
                             :key="option.id"
                             :value="option.id"
                         >
-                            {{ option.name }}
+                            {{ option.name
+                            }}{{ option.is_default ? ' (predeterminada)' : '' }}
                         </SelectItem>
                     </SelectContent>
                 </Select>
+                <p
+                    v-if="defaultPriceList && !form.price_list_id"
+                    class="text-xs text-muted-foreground"
+                >
+                    Empresa: la lista predeterminada es «{{
+                        defaultPriceList.name
+                    }}».
+                </p>
             </FormField>
-            <FormField
+            <FormCurrencyInput
+                id="credit_limit"
+                v-model="form.credit_limit"
                 label="Límite de crédito"
-                for="credit_limit"
+                tooltip="Monto máximo de crédito autorizado para este cliente en ventas a crédito."
                 :error="form.errors.credit_limit"
-            >
-                <Input
-                    id="credit_limit"
-                    v-model="form.credit_limit"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                />
-            </FormField>
+            />
             <FormField
                 label="Estado"
                 for="status"

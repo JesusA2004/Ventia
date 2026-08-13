@@ -2,6 +2,7 @@
 import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import ProductPriceController from '@/actions/App/Http/Controllers/Catalog/ProductPriceController';
+import FormCurrencyInput from '@/components/forms/FormCurrencyInput.vue';
 import FormField from '@/components/forms/FormField.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -57,21 +58,13 @@ function submit() {
             </DialogHeader>
 
             <form class="space-y-4" @submit.prevent="submit">
-                <FormField
+                <FormCurrencyInput
+                    id="cost"
+                    v-model="form.cost"
                     label="Nuevo costo"
-                    for="cost"
                     required
                     :error="form.errors.cost"
-                >
-                    <Input
-                        id="cost"
-                        v-model="form.cost"
-                        type="number"
-                        step="0.0001"
-                        min="0"
-                        required
-                    />
-                </FormField>
+                />
                 <FormField
                     label="Motivo del cambio"
                     for="reason"

@@ -4,11 +4,14 @@ namespace App\Http\Requests\Settings;
 
 use App\Enums\Status;
 use App\Enums\WarehouseType;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateWarehouseRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('warehouse'));
@@ -22,7 +25,7 @@ class UpdateWarehouseRequest extends FormRequest
         return [
             'branch_id' => [
                 'required',
-                Rule::exists('branches', 'id')->where('company_id', $this->user()->company_id),
+                Rule::exists('branches', 'id')->where('company_id', $this->activeCompanyId()),
             ],
             'name' => ['required', 'string', 'max:255'],
             'code' => [

@@ -3,11 +3,14 @@
 namespace App\Http\Requests\Settings;
 
 use App\Enums\Status;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateRegisterRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('register'));
@@ -21,7 +24,7 @@ class UpdateRegisterRequest extends FormRequest
         return [
             'branch_id' => [
                 'required',
-                Rule::exists('branches', 'id')->where('company_id', $this->user()->company_id),
+                Rule::exists('branches', 'id')->where('company_id', $this->activeCompanyId()),
             ],
             'warehouse_id' => [
                 'nullable',
@@ -38,7 +41,7 @@ class UpdateRegisterRequest extends FormRequest
             'has_cash_drawer' => ['boolean'],
             'assigned_user_id' => [
                 'nullable',
-                Rule::exists('users', 'id')->where('company_id', $this->user()->company_id),
+                Rule::exists('users', 'id')->where('company_id', $this->activeCompanyId()),
             ],
             'status' => ['required', Rule::enum(Status::class)],
         ];

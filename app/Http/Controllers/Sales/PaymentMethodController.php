@@ -91,6 +91,6 @@ class PaymentMethodController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        return response()->json(PaymentMethodResource::collection($methods));
+        return response()->json(['data' => PaymentMethodResource::collection($methods)]);
     }
 }

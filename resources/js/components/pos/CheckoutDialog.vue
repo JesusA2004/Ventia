@@ -225,7 +225,8 @@ async function submit() {
                     <Input
                         v-model="amount"
                         type="number"
-                        step="0.01"
+                        inputmode="decimal"
+                        step="1"
                         min="0.01"
                         placeholder="Monto"
                         class="col-span-1"

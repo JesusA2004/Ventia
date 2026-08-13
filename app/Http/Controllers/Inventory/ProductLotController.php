@@ -9,9 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\StoreProductLotRequest;
 use App\Http\Requests\Inventory\UpdateProductLotRequest;
 use App\Http\Resources\ProductLotResource;
-use App\Http\Resources\ProductResource;
 use App\Http\Resources\WarehouseResource;
-use App\Models\Product;
 use App\Models\ProductLot;
 use App\Models\Warehouse;
 use App\Support\PaginatedResource;
@@ -53,7 +51,6 @@ class ProductLotController extends Controller
     public function create(): Response
     {
         return Inertia::render('Inventory/Lots/Create', [
-            'productOptions' => ProductResource::collection(Product::query()->where('status', 'active')->orderBy('name')->get()),
             'warehouseOptions' => WarehouseResource::collection(Warehouse::query()->orderBy('name')->get()),
         ]);
     }

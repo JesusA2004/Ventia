@@ -11,6 +11,11 @@ import {
 } from '@/components/ui/popover';
 import type { Product, ProductVariant } from '@/types';
 
+const props = defineProps<{
+    /** Ranks products that track lots/caducidad first, without hiding the rest. */
+    prioritizeLots?: boolean;
+}>();
+
 const emit = defineEmits<{
     select: [product: Product, variant: ProductVariant | null];
 }>();
@@ -19,6 +24,7 @@ const open = ref(false);
 const search = ref('');
 const results = ref<Product[]>([]);
 const loading = ref(false);
+const errored = ref(false);
 const expandedProduct = ref<number | null>(null);
 
 watchDebounced(
@@ -26,21 +32,42 @@ watchDebounced(
     async (value) => {
         if (!value) {
             results.value = [];
+            errored.value = false;
 
             return;
         }
 
         loading.value = true;
+        errored.value = false;
 
         try {
             const response = await fetch(
-                ProductController.search.url({ query: { search: value } }),
+                ProductController.search.url({
+                    query: {
+                        search: value,
+                        ...(props.prioritizeLots
+                            ? { prioritize_lots: 1 }
+                            : {}),
+                    },
+                }),
                 {
                     headers: { Accept: 'application/json' },
+                    credentials: 'same-origin',
                 },
             );
+
+            if (!response.ok) {
+                results.value = [];
+                errored.value = true;
+
+                return;
+            }
+
             const payload = await response.json();
             results.value = payload.data ?? [];
+        } catch {
+            results.value = [];
+            errored.value = true;
         } finally {
             loading.value = false;
         }
@@ -91,6 +118,12 @@ function choose(product: Product, variant: ProductVariant | null = null) {
             <div class="max-h-80 overflow-y-auto p-1">
                 <p v-if="loading" class="p-3 text-sm text-muted-foreground">
                     Buscando...
+                </p>
+                <p
+                    v-else-if="errored"
+                    class="p-3 text-sm text-destructive"
+                >
+                    No se pudo buscar productos. Intenta de nuevo.
                 </p>
                 <p
                     v-else-if="search && results.length === 0"

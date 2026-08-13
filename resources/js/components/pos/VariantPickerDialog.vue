@@ -57,7 +57,14 @@ function choose(variantId: number) {
                         </span>
                         <span class="text-sm">
                             {{ formatCurrency(variant.sale_price) }}
-                            <span class="block text-xs text-muted-foreground"
+                            <span
+                                v-if="Number(variant.stock) <= 0"
+                                class="block text-xs font-medium text-destructive"
+                                >Sin existencias</span
+                            >
+                            <span
+                                v-else
+                                class="block text-xs text-muted-foreground"
                                 >Stock: {{ variant.stock }}</span
                             >
                         </span>

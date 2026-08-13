@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests\Catalog;
 
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class ChangeProductCostRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('editCost', $this->route('product'));
@@ -24,7 +27,7 @@ class ChangeProductCostRequest extends FormRequest
         return [
             'product_variant_id' => [
                 'nullable',
-                Rule::exists('product_variants', 'id')->where('company_id', $this->user()->company_id)->where('product_id', $product->id),
+                Rule::exists('product_variants', 'id')->where('company_id', $this->activeCompanyId())->where('product_id', $product->id),
             ],
             'cost' => ['required', 'numeric', 'min:0'],
             'reason' => ['required', 'string', 'max:255'],

@@ -3,12 +3,15 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Enums\Status;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\ProductLot;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreProductLotRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', ProductLot::class);
@@ -19,7 +22,7 @@ class StoreProductLotRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         return [
             'product_id' => ['required', Rule::exists('products', 'id')->where('company_id', $companyId)],

@@ -3,10 +3,10 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { LockKeyholeIcon } from '@lucide/vue';
 import EmptyState from '@/components/EmptyState.vue';
 import AppAlert from '@/components/feedback/AppAlert.vue';
+import FormCurrencyInput from '@/components/forms/FormCurrencyInput.vue';
 import FormField from '@/components/forms/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -107,21 +107,14 @@ function submit() {
                 </Select>
             </FormField>
 
-            <FormField
+            <FormCurrencyInput
+                id="opening_amount"
+                v-model="form.opening_amount"
                 label="Fondo inicial"
-                for="opening_amount"
                 required
+                tooltip="Efectivo con el que se abre la caja, antes de registrar cualquier venta."
                 :error="form.errors.opening_amount"
-            >
-                <Input
-                    id="opening_amount"
-                    v-model="form.opening_amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                />
-            </FormField>
+            />
 
             <FormField
                 label="Notas de apertura"

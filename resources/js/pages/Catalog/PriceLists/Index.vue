@@ -7,6 +7,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import FilterBar from '@/components/filters/FilterBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import StatusBadge from '@/components/StatusBadge.vue';
+import { Badge } from '@/components/ui/badge';
 import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const columns: DataTableColumn[] = [
     { key: 'code', label: 'Código' },
     { key: 'currency', label: 'Moneda' },
     { key: 'priority', label: 'Prioridad' },
+    { key: 'is_default', label: 'Predeterminada' },
     { key: 'status', label: 'Estado' },
     { key: 'actions', label: '', class: 'text-right' },
 ];
@@ -78,6 +80,12 @@ function destroy(priceList: PriceList) {
                     title="Sin listas de precios"
                     description="Crea tu primera lista de precios."
                 />
+            </template>
+            <template #cell-is_default="{ row }">
+                <Badge v-if="row.is_default" variant="outline">
+                    Predeterminada
+                </Badge>
+                <span v-else class="text-muted-foreground">—</span>
             </template>
             <template #cell-status="{ row }">
                 <StatusBadge :status="row.status" :label="row.status_label" />

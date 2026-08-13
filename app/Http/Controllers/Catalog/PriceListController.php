@@ -10,6 +10,7 @@ use App\Models\PriceList;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -43,7 +44,13 @@ class PriceListController extends Controller
 
     public function store(StorePriceListRequest $request): RedirectResponse
     {
-        PriceList::create($request->validated());
+        DB::transaction(function () use ($request) {
+            if ($request->boolean('is_default')) {
+                PriceList::query()->update(['is_default' => false]);
+            }
+
+            PriceList::create($request->validated());
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lista de precios creada correctamente.']);
 
@@ -59,7 +66,13 @@ class PriceListController extends Controller
 
     public function update(UpdatePriceListRequest $request, PriceList $priceList): RedirectResponse
     {
-        $priceList->update($request->validated());
+        DB::transaction(function () use ($request, $priceList) {
+            if ($request->boolean('is_default')) {
+                PriceList::query()->whereKeyNot($priceList->id)->update(['is_default' => false]);
+            }
+
+            $priceList->update($request->validated());
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lista de precios actualizada correctamente.']);
 

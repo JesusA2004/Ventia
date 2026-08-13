@@ -11,6 +11,7 @@ export type Customer = {
     legal_name: string | null;
     tax_id: string | null;
     phone: string | null;
+    phone_country_code: string;
     email: string | null;
     address: string | null;
     price_list_id: number | null;

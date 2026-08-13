@@ -15,11 +15,12 @@ import type { Branch } from '@/types';
 
 const props = defineProps<{
     branch?: Branch;
+    suggestedCode?: string;
 }>();
 
 const form = useForm({
     name: props.branch?.name ?? '',
-    code: props.branch?.code ?? '',
+    code: props.branch?.code ?? props.suggestedCode ?? '',
     address: props.branch?.address ?? '',
     phone: props.branch?.phone ?? '',
     status: props.branch?.status ?? 'active',
@@ -50,6 +51,7 @@ function submit() {
                 for="code"
                 required
                 :error="form.errors.code"
+                tooltip="Identificador corto y único de la sucursal. Se sugiere uno automáticamente, pero puedes cambiarlo."
             >
                 <Input
                     id="code"

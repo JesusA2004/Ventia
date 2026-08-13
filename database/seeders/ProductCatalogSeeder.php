@@ -77,7 +77,7 @@ class ProductCatalogSeeder extends Seeder
 
         $general = PriceList::firstOrCreate(
             ['company_id' => $company->id, 'code' => 'GENERAL'],
-            ['name' => 'General', 'currency' => $company->currency, 'priority' => 100, 'status' => Status::Active],
+            ['name' => 'General', 'currency' => $company->currency, 'priority' => 100, 'is_default' => true, 'status' => Status::Active],
         );
         $wholesale = PriceList::firstOrCreate(
             ['company_id' => $company->id, 'code' => 'MAYOREO'],

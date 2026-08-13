@@ -4,12 +4,15 @@ namespace App\Http\Requests\Sales;
 
 use App\Enums\PaymentMethodType;
 use App\Enums\Status;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\PaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StorePaymentMethodRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', PaymentMethod::class);
@@ -20,7 +23,7 @@ class StorePaymentMethodRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         return [
             'name' => ['required', 'string', 'max:255'],

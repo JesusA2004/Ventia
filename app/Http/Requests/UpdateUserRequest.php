@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class UpdateUserRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('user'));
@@ -27,7 +30,7 @@ class UpdateUserRequest extends FormRequest
             'branch_ids' => ['array'],
             'branch_ids.*' => [
                 'integer',
-                'exists:branches,id',
+                Rule::exists('branches', 'id')->where('company_id', $this->activeCompanyId()),
             ],
         ];
     }

@@ -102,14 +102,14 @@ function submit() {
             <FormField
                 label="Código"
                 for="code"
-                required
                 :error="form.errors.code"
+                tooltip="Identificador corto y único dentro de la sucursal. Déjalo vacío para que se genere automáticamente (por ejemplo, ALM-002)."
             >
                 <Input
                     id="code"
                     v-model="form.code"
-                    required
                     class="uppercase"
+                    placeholder="Automático si se deja vacío"
                 />
             </FormField>
             <FormField
@@ -132,6 +132,7 @@ function submit() {
                 label="Permite venta"
                 for="allows_sale"
                 :error="form.errors.allows_sale"
+                tooltip="Indica si este almacén puede utilizarse como origen de inventario para ventas."
             >
                 <div class="flex h-9 items-center">
                     <Switch id="allows_sale" v-model="form.allows_sale" />

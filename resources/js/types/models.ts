@@ -89,5 +89,12 @@ export type RoleSummary = {
 
 export type PermissionEntry = {
     name: string;
+    label: string;
+    description: string | null;
     granted: boolean;
+};
+
+export type PermissionGroup = {
+    label: string;
+    permissions: PermissionEntry[];
 };

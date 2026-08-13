@@ -19,7 +19,9 @@ use App\Http\Requests\Sales\SuspendSaleRequest;
 use App\Http\Resources\SaleResource;
 use App\Models\CashRegister;
 use App\Models\Sale;
+use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -39,6 +41,7 @@ class SaleController extends Controller
         private readonly ResumeSaleAction $resumeSale,
         private readonly CancelSaleAction $cancelSale,
         private readonly ProcessSaleReturnAction $processReturn,
+        private readonly AuditLogger $audit,
     ) {}
 
     public function index(Request $request): Response
@@ -62,6 +65,12 @@ class SaleController extends Controller
         return Inertia::render('Sales/Index', [
             'sales' => PaginatedResource::make($sales, SaleResource::class),
             'filters' => $request->only(['folio', 'customer_id', 'cashier_id', 'register_id', 'status', 'date_from', 'date_to']),
+            'cashierOptions' => $request->user()->can('cash.view')
+                ? User::query()->orderBy('name')->get(['id', 'name'])
+                : [],
+            'registerOptions' => $request->user()->can('cash.view')
+                ? CashRegister::query()->orderBy('name')->get(['id', 'name'])
+                : [],
         ]);
     }
 
@@ -200,6 +209,14 @@ class SaleController extends Controller
         } catch (InvalidStateTransitionException $e) {
             throw ValidationException::withMessages(['sale' => $e->getMessage()]);
         }
+
+        $this->audit->log(
+            'sales', 'cancelled',
+            "Canceló la venta {$sale->folio}.",
+            $sale,
+            reason: $request->validated('reason'),
+            branchId: $sale->branch_id,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Venta cancelada correctamente.']);
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateRolePermissionsRequest;
+use App\Support\PermissionLabels;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -47,10 +48,17 @@ class RoleController extends Controller
             ->orderBy('name')
             ->get()
             ->groupBy(fn (Permission $permission) => explode('.', $permission->name)[0])
-            ->map(fn ($permissions) => $permissions->map(fn (Permission $permission) => [
-                'name' => $permission->name,
-                'granted' => $rolePermissions->contains($permission->name),
-            ])->values());
+            ->map(fn ($permissions, $groupKey) => [
+                'label' => PermissionLabels::group($groupKey),
+                'permissions' => $permissions->map(fn (Permission $permission) => [
+                    'name' => $permission->name,
+                    'label' => PermissionLabels::label($permission->name),
+                    'description' => PermissionLabels::description($permission->name),
+                    'granted' => $rolePermissions->contains($permission->name),
+                ])->values(),
+            ])
+            ->sortBy('label')
+            ->values();
 
         return Inertia::render('Roles/Edit', [
             'role' => ['id' => $role->id, 'name' => $role->name],

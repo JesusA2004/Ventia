@@ -204,7 +204,8 @@ const hasAttributes = computed(() => props.attributeOptions.length > 0);
                             <Input
                                 v-model="variant.cost"
                                 type="number"
-                                step="0.0001"
+                                inputmode="decimal"
+                                step="1"
                                 min="0"
                                 class="w-28"
                             />
@@ -213,7 +214,8 @@ const hasAttributes = computed(() => props.attributeOptions.length > 0);
                             <Input
                                 v-model="variant.sale_price"
                                 type="number"
-                                step="0.0001"
+                                inputmode="decimal"
+                                step="1"
                                 min="0"
                                 class="w-28"
                             />

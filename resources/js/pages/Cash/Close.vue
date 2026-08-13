@@ -2,10 +2,10 @@
 import { Head, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import DenominationCounter from '@/components/cash/DenominationCounter.vue';
+import FormCurrencyInput from '@/components/forms/FormCurrencyInput.vue';
 import FormField from '@/components/forms/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import cash from '@/routes/cash';
@@ -135,21 +135,14 @@ function submit() {
         </Button>
 
         <form class="space-y-4 rounded-lg border p-4" @submit.prevent="submit">
-            <FormField
+            <FormCurrencyInput
+                id="counted_cash"
+                v-model="form.counted_cash"
                 label="Efectivo contado"
-                for="counted_cash"
                 required
+                tooltip="Efectivo real contado en caja al cierre del turno, para compararlo contra el efectivo esperado."
                 :error="form.errors.counted_cash"
-            >
-                <Input
-                    id="counted_cash"
-                    v-model="form.counted_cash"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                />
-            </FormField>
+            />
             <p class="text-sm text-muted-foreground">
                 Diferencia estimada:
                 <span

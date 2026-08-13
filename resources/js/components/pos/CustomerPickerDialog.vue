@@ -17,17 +17,34 @@ const emit = defineEmits<{ select: [customer: Customer] }>();
 
 const search = ref('');
 const results = ref<Customer[]>([]);
+const errored = ref(false);
 let debounceHandle: ReturnType<typeof setTimeout> | null = null;
 
 async function runSearch() {
-    const response = await fetch(
-        customers.search.url({ query: { search: search.value } }),
-        {
-            headers: { Accept: 'application/json' },
-        },
-    );
-    const payload = await response.json();
-    results.value = payload.data ?? [];
+    errored.value = false;
+
+    try {
+        const response = await fetch(
+            customers.search.url({ query: { search: search.value } }),
+            {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            },
+        );
+
+        if (!response.ok) {
+            results.value = [];
+            errored.value = true;
+
+            return;
+        }
+
+        const payload = await response.json();
+        results.value = payload.data ?? [];
+    } catch {
+        results.value = [];
+        errored.value = true;
+    }
 }
 
 watch(open, (value) => {
@@ -82,7 +99,13 @@ function choose(customer: Customer) {
                     </button>
                 </li>
                 <li
-                    v-if="!results.length"
+                    v-if="errored"
+                    class="p-4 text-center text-sm text-destructive"
+                >
+                    No se pudo buscar clientes. Intenta de nuevo.
+                </li>
+                <li
+                    v-else-if="!results.length"
                     class="p-4 text-center text-sm text-muted-foreground"
                 >
                     Sin resultados.

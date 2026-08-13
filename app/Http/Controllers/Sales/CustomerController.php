@@ -107,19 +107,21 @@ class CustomerController extends Controller
         abort_unless($request->user()->can('pos.access') || $request->user()->can('customers.view'), 403);
 
         $search = $request->string('search')->toString();
+        $searchDigits = preg_replace('/\D/', '', $search);
 
         $customers = Customer::query()
             ->where('status', 'active')
             ->when($search, fn ($q) => $q->where(fn ($sub) => $sub
                 ->where('name', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%")
+                ->when($searchDigits, fn ($digitQuery) => $digitQuery->orWhere('phone', 'like', "%{$searchDigits}%"))
                 ->orWhere('tax_id', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
             ))
             ->orderBy('name')
             ->limit(15)
             ->get();
 
-        return response()->json(CustomerResource::collection($customers));
+        return response()->json(['data' => CustomerResource::collection($customers)]);
     }
 
     public function salesHistory(Customer $customer): Response

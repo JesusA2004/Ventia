@@ -4,11 +4,14 @@ namespace App\Http\Requests\Sales;
 
 use App\Enums\PaymentMethodType;
 use App\Enums\Status;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdatePaymentMethodRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('payment_method'));
@@ -19,7 +22,7 @@ class UpdatePaymentMethodRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         return [
             'name' => ['required', 'string', 'max:255'],

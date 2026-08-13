@@ -7,6 +7,7 @@ import {
     UserIcon,
 } from '@lucide/vue';
 import { computed } from 'vue';
+import { toast } from 'vue-sonner';
 import EmptyState from '@/components/EmptyState.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,12 @@ function amountFor(key: string): number {
     return cart.lineTotals.find((l) => l.key === key)?.net ?? 0;
 }
 
+function reportQuantityResult(result: { ok: boolean; message?: string }) {
+    if (!result.ok && result.message) {
+        toast.error(result.message);
+    }
+}
+
 function increment(key: string, allowsFraction: boolean) {
     const line = cart.lines.find((l) => l.key === key);
 
@@ -43,9 +50,11 @@ function increment(key: string, allowsFraction: boolean) {
         return;
     }
 
-    cart.updateQuantity(
-        key,
-        String(Number(line.quantity) + (allowsFraction ? 0.1 : 1)),
+    reportQuantityResult(
+        cart.updateQuantity(
+            key,
+            String(Number(line.quantity) + (allowsFraction ? 0.1 : 1)),
+        ),
     );
 }
 
@@ -137,7 +146,12 @@ const canCheckout = computed(() => cart.lines.length > 0 && !props.processing);
                                 class="h-7 w-20 text-center"
                                 @update:model-value="
                                     (v) =>
-                                        cart.updateQuantity(line.key, String(v))
+                                        reportQuantityResult(
+                                            cart.updateQuantity(
+                                                line.key,
+                                                String(v),
+                                            ),
+                                        )
                                 "
                             />
                             <Button
@@ -190,8 +204,9 @@ const canCheckout = computed(() => cart.lines.length > 0 && !props.processing);
                             v-if="line.discount_type"
                             :model-value="line.discount_value ?? ''"
                             type="number"
+                            inputmode="decimal"
                             min="0"
-                            step="0.01"
+                            step="1"
                             class="h-7 w-20 text-xs"
                             @update:model-value="
                                 (v) =>

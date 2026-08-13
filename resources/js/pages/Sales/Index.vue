@@ -3,11 +3,13 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { ReceiptIcon } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
-import FilterBar from '@/components/filters/FilterBar.vue';
+import SearchInput from '@/components/filters/SearchInput.vue';
+import SearchableSelect from '@/components/forms/SearchableSelect.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -21,7 +23,16 @@ import type { Paginated, Sale } from '@/types';
 
 const props = defineProps<{
     sales: Paginated<Sale>;
-    filters: { folio?: string; status?: string };
+    filters: {
+        folio?: string;
+        status?: string;
+        cashier_id?: number;
+        register_id?: number;
+        date_from?: string;
+        date_to?: string;
+    };
+    cashierOptions: { id: number; name: string }[];
+    registerOptions: { id: number; name: string }[];
 }>();
 
 defineOptions({
@@ -31,14 +42,18 @@ defineOptions({
 });
 
 const status = ref(props.filters.status ?? '');
+const folio = ref(props.filters.folio ?? '');
 
-watch(status, (value) => {
+function apply(partial: Record<string, string | number | undefined>) {
     router.get(
         salesRoutes.index.url(),
-        { status: value || undefined, folio: props.filters.folio },
-        { preserveState: true, replace: true },
+        { ...props.filters, ...partial },
+        { preserveState: true, preserveScroll: true, replace: true },
     );
-});
+}
+
+watch(status, (value) => apply({ status: value || undefined }));
+watch(folio, (value) => apply({ folio: value || undefined }));
 
 const columns: DataTableColumn[] = [
     { key: 'folio', label: 'Folio' },
@@ -72,10 +87,7 @@ const statusVariant: Record<
         />
 
         <div class="flex flex-wrap items-center gap-3">
-            <FilterBar
-                :model-value="filters.folio ?? ''"
-                placeholder="Buscar por folio..."
-            />
+            <SearchInput v-model="folio" placeholder="Buscar por folio..." />
             <Select v-model="status">
                 <SelectTrigger class="w-48">
                     <SelectValue placeholder="Todos los estados" />
@@ -91,6 +103,68 @@ const statusVariant: Record<
                     <SelectItem value="cancelled">Cancelada</SelectItem>
                 </SelectContent>
             </Select>
+            <SearchableSelect
+                v-if="cashierOptions.length"
+                class="w-48"
+                :model-value="
+                    filters.cashier_id ? String(filters.cashier_id) : null
+                "
+                :options="
+                    cashierOptions.map((c) => ({
+                        value: String(c.id),
+                        label: c.name,
+                    }))
+                "
+                placeholder="Cajero"
+                all-label="Todos los cajeros"
+                @update:model-value="
+                    (v) => apply({ cashier_id: v ?? undefined })
+                "
+            />
+            <SearchableSelect
+                v-if="registerOptions.length"
+                class="w-48"
+                :model-value="
+                    filters.register_id ? String(filters.register_id) : null
+                "
+                :options="
+                    registerOptions.map((r) => ({
+                        value: String(r.id),
+                        label: r.name,
+                    }))
+                "
+                placeholder="Caja"
+                all-label="Todas las cajas"
+                @update:model-value="
+                    (v) => apply({ register_id: v ?? undefined })
+                "
+            />
+            <Input
+                type="date"
+                class="w-40"
+                :model-value="filters.date_from ?? ''"
+                @change="
+                    (e: Event) =>
+                        apply({
+                            date_from:
+                                (e.target as HTMLInputElement).value ||
+                                undefined,
+                        })
+                "
+            />
+            <Input
+                type="date"
+                class="w-40"
+                :model-value="filters.date_to ?? ''"
+                @change="
+                    (e: Event) =>
+                        apply({
+                            date_to:
+                                (e.target as HTMLInputElement).value ||
+                                undefined,
+                        })
+                "
+            />
         </div>
 
         <ServerDataTable :columns="columns" :paginated="props.sales">

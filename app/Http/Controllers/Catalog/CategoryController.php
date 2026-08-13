@@ -7,6 +7,7 @@ use App\Http\Requests\Catalog\StoreCategoryRequest;
 use App\Http\Requests\Catalog\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class CategoryController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->authorizeResource(Category::class, 'category');
     }
@@ -47,7 +48,9 @@ class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        Category::create([...$request->validated(), 'slug' => str($request->validated('name'))->slug()]);
+        $category = Category::create([...$request->validated(), 'slug' => str($request->validated('name'))->slug()]);
+
+        $this->audit->log('categories', 'created', "Creó la categoría «{$category->name}».", $category);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Categoría creada correctamente.']);
 
@@ -64,7 +67,10 @@ class CategoryController extends Controller
 
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
+        $before = $category->only(['name', 'parent_id', 'status']);
         $category->update([...$request->validated(), 'slug' => str($request->validated('name'))->slug()]);
+
+        $this->audit->log('categories', 'updated', "Actualizó la categoría «{$category->name}».", $category, $before, $category->only(['name', 'parent_id', 'status']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Categoría actualizada correctamente.']);
 
@@ -79,7 +85,10 @@ class CategoryController extends Controller
             ]);
         }
 
+        $name = $category->name;
         $category->delete();
+
+        $this->audit->log('categories', 'deleted', "Eliminó la categoría «{$name}».", $category);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Categoría eliminada correctamente.']);
 

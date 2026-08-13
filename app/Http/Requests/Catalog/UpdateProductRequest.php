@@ -6,6 +6,7 @@ use App\Enums\BarcodeType;
 use App\Enums\ProductType;
 use App\Enums\Status;
 use App\Enums\TrackingType;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\ProductAttributeValue;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -13,6 +14,8 @@ use Illuminate\Validation\Validator;
 
 class UpdateProductRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('product'));
@@ -23,7 +26,7 @@ class UpdateProductRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
         $productId = $this->route('product');
 
         $rules = [
@@ -82,7 +85,7 @@ class UpdateProductRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            $companyId = $this->user()->company_id;
+            $companyId = $this->activeCompanyId();
 
             foreach ($this->input('variants', []) as $index => $variant) {
                 foreach ($variant['attribute_value_ids'] ?? [] as $valueId) {

@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $legal_name
  * @property string|null $tax_id
  * @property string|null $phone
+ * @property string $phone_country_code
  * @property string|null $email
  * @property string|null $address
  * @property int|null $price_list_id
@@ -32,7 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 #[Fillable([
     'company_id', 'branch_id', 'customer_type', 'name', 'legal_name', 'tax_id',
-    'phone', 'email', 'address', 'price_list_id', 'credit_limit', 'current_balance',
+    'phone', 'phone_country_code', 'email', 'address', 'price_list_id', 'credit_limit', 'current_balance',
     'notes', 'status',
 ])]
 class Customer extends Model

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import ProductLotController from '@/actions/App/Http/Controllers/Inventory/ProductLotController';
 import FormField from '@/components/forms/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import ProductPicker from '@/components/products/ProductPicker.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,7 +18,6 @@ import { index } from '@/routes/inventory/lots';
 import type { Product, Warehouse } from '@/types';
 
 const props = defineProps<{
-    productOptions: Product[];
     warehouseOptions: Warehouse[];
 }>();
 
@@ -29,6 +30,8 @@ defineOptions({
     },
 });
 
+const selectedProduct = ref<Product | null>(null);
+
 const form = useForm({
     product_id: null as number | null,
     lot_number: '',
@@ -40,6 +43,11 @@ const form = useForm({
     initial_quantity: '',
     warehouse_id: props.warehouseOptions[0]?.id ?? null,
 });
+
+function onProductSelected(product: Product) {
+    selectedProduct.value = product;
+    form.product_id = product.id;
+}
 
 function submit() {
     form.post(ProductLotController.store.url());
@@ -56,28 +64,21 @@ function submit() {
         />
 
         <form class="max-w-2xl space-y-6" @submit.prevent="submit">
+            <FormField
+                label="Producto"
+                for="product_id"
+                required
+                :error="form.errors.product_id"
+            >
+                <ProductPicker prioritize-lots @select="onProductSelected" />
+                <p v-if="selectedProduct" class="text-sm text-muted-foreground">
+                    Seleccionado: {{ selectedProduct.name }} ({{
+                        selectedProduct.sku
+                    }})
+                </p>
+            </FormField>
+
             <div class="grid gap-4 sm:grid-cols-2">
-                <FormField
-                    label="Producto"
-                    for="product_id"
-                    required
-                    :error="form.errors.product_id"
-                >
-                    <Select v-model="form.product_id">
-                        <SelectTrigger id="product_id" class="w-full">
-                            <SelectValue placeholder="Selecciona un producto" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem
-                                v-for="option in productOptions"
-                                :key="option.id"
-                                :value="option.id"
-                            >
-                                {{ option.name }} ({{ option.sku }})
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
-                </FormField>
                 <FormField
                     label="Número de lote"
                     for="lot_number"
@@ -170,7 +171,9 @@ function submit() {
                 </FormField>
             </div>
 
-            <Button type="submit" :disabled="form.processing"
+            <Button
+                type="submit"
+                :disabled="form.processing || !form.product_id"
                 >Crear lote</Button
             >
         </form>

@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests\Inventory;
 
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\StockTransfer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreStockTransferRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', StockTransfer::class);
@@ -18,7 +21,7 @@ class StoreStockTransferRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         return [
             'origin_warehouse_id' => ['required', 'different:destination_warehouse_id', Rule::exists('warehouses', 'id')->where('company_id', $companyId)],

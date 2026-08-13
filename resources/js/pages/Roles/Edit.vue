@@ -1,16 +1,22 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { CircleHelpIcon } from '@lucide/vue';
 import RoleController from '@/actions/App/Http/Controllers/RoleController';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { index } from '@/routes/roles';
-import type { PermissionEntry } from '@/types';
+import type { PermissionGroup } from '@/types';
 
 const props = defineProps<{
     role: { id: number; name: string };
-    permissionGroups: Record<string, PermissionEntry[]>;
+    permissionGroups: PermissionGroup[];
 }>();
 
 defineOptions({
@@ -23,8 +29,8 @@ defineOptions({
 });
 
 const granted = new Set(
-    Object.values(props.permissionGroups)
-        .flat()
+    props.permissionGroups
+        .flatMap((group) => group.permissions)
         .filter((permission) => permission.granted)
         .map((permission) => permission.name),
 );
@@ -55,16 +61,16 @@ function submit() {
 
         <form class="max-w-3xl space-y-8" @submit.prevent="submit">
             <div
-                v-for="(permissions, group) in permissionGroups"
-                :key="group"
+                v-for="group in permissionGroups"
+                :key="group.label"
                 class="space-y-3"
             >
-                <h3 class="text-sm font-medium capitalize">{{ group }}</h3>
+                <h3 class="text-sm font-medium">{{ group.label }}</h3>
                 <div class="grid gap-2 sm:grid-cols-2">
                     <div
-                        v-for="permission in permissions"
+                        v-for="permission in group.permissions"
                         :key="permission.name"
-                        class="flex items-center gap-2"
+                        class="flex items-center gap-1.5"
                     >
                         <Checkbox
                             :id="permission.name"
@@ -77,8 +83,20 @@ function submit() {
                             "
                         />
                         <Label :for="permission.name" class="font-normal">{{
-                            permission.name
+                            permission.label
                         }}</Label>
+                        <Tooltip v-if="permission.description">
+                            <TooltipTrigger
+                                type="button"
+                                class="text-muted-foreground hover:text-foreground"
+                                :aria-label="`Ayuda: ${permission.label}`"
+                            >
+                                <CircleHelpIcon class="size-3.5" />
+                            </TooltipTrigger>
+                            <TooltipContent>{{
+                                permission.description
+                            }}</TooltipContent>
+                        </Tooltip>
                     </div>
                 </div>
             </div>

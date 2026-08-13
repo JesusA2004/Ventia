@@ -3,11 +3,14 @@
 namespace App\Http\Requests\Catalog;
 
 use App\Enums\Status;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateBrandRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('brand'));
@@ -22,7 +25,7 @@ class UpdateBrandRequest extends FormRequest
             'name' => [
                 'required', 'string', 'max:255',
                 Rule::unique('brands', 'name')
-                    ->where('company_id', $this->user()->company_id)
+                    ->where('company_id', $this->activeCompanyId())
                     ->ignore($this->route('brand')),
             ],
             'description' => ['nullable', 'string'],

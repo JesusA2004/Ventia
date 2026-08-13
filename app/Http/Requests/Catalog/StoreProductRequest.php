@@ -6,6 +6,7 @@ use App\Enums\BarcodeType;
 use App\Enums\ProductType;
 use App\Enums\Status;
 use App\Enums\TrackingType;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,6 +15,8 @@ use Illuminate\Validation\Validator;
 
 class StoreProductRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', Product::class);
@@ -24,7 +27,7 @@ class StoreProductRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         return [
             'category_id' => ['nullable', Rule::exists('categories', 'id')->where('company_id', $companyId)],
@@ -73,7 +76,7 @@ class StoreProductRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            $companyId = $this->user()->company_id;
+            $companyId = $this->activeCompanyId();
 
             foreach ($this->input('variants', []) as $index => $variant) {
                 foreach ($variant['attribute_value_ids'] ?? [] as $valueId) {

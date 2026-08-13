@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Enums\InventoryMovementType;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\Product;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,6 +11,8 @@ use Illuminate\Validation\Rule;
 
 class StockAdjustmentRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('inventory.adjust');
@@ -20,7 +23,7 @@ class StockAdjustmentRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         return [
             'warehouse_id' => ['required', Rule::exists('warehouses', 'id')->where('company_id', $companyId)],

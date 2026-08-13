@@ -14,6 +14,7 @@ use App\Models\SalePayment;
 use App\Models\SaleReturn;
 use App\Models\User;
 use App\Services\ActiveCompanyContext;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -24,8 +25,8 @@ use Inertia\Response;
 /**
  * First functional block of the Reportes module: a tabbed shell (Resumen,
  * Ventas, Caja, Inventario) sharing one set of global filters. Productos,
- * Clientes, Rentabilidad and PDF export are deliberately out of scope for
- * this round — see the delivery report.
+ * Clientes and Rentabilidad tabs are deliberately out of scope for this
+ * round — see the delivery report.
  */
 class ReportController extends Controller
 {
@@ -67,21 +68,7 @@ class ReportController extends Controller
     {
         abort_unless($request->user()->can('reports.export'), 403);
 
-        $user = $request->user();
-        $tab = in_array($request->string('tab')->toString(), self::TABS, true)
-            ? $request->string('tab')->toString()
-            : 'summary';
-        [$from, $to] = $this->resolveDateRange($request);
-        $from = $from->copy()->utc();
-        $to = $to->copy()->utc();
-        $branchId = $request->integer('branch_id') ?: null;
-
-        $data = match ($tab) {
-            'sales' => $this->salesData($user, $from, $to, $branchId),
-            'cash' => $this->cashData($user, $from, $to, $branchId),
-            'inventory' => $this->inventoryData($user, $branchId),
-            default => $this->summaryData($user, $from, $to, $branchId),
-        };
+        ['tab' => $tab, 'data' => $data] = $this->resolveTabData($request);
 
         $rows = ['Concepto,Valor'];
 
@@ -103,6 +90,66 @@ class ReportController extends Controller
             'Content-Type' => 'text/csv',
             'Content-Disposition' => "attachment; filename=\"reporte-{$tab}.csv\"",
         ]);
+    }
+
+    /**
+     * Professional PDF: company header, report name, period/branch filters,
+     * generation timestamp, KPIs and detail tables. No embedded chart —
+     * dompdf renders static HTML/CSS, not canvas-based Chart.js output, and
+     * forcing that in would trade stability for a nice-to-have (see #40 in
+     * the UX request this shipped with).
+     */
+    public function exportPdf(Request $request): HttpResponse
+    {
+        abort_unless($request->user()->can('reports.export'), 403);
+
+        ['tab' => $tab, 'data' => $data, 'from' => $from, 'to' => $to, 'branchId' => $branchId] = $this->resolveTabData($request);
+
+        $tabLabels = [
+            'summary' => 'Resumen',
+            'sales' => 'Ventas',
+            'cash' => 'Caja',
+            'inventory' => 'Inventario',
+        ];
+
+        $pdf = Pdf::loadView('reports.pdf', [
+            'reportTitle' => 'Reporte de '.($tabLabels[$tab] ?? $tab),
+            'company' => $this->activeCompany->company(),
+            'branchName' => $branchId ? Branch::query()->withoutGlobalScopes()->find($branchId)?->name : null,
+            'filters' => ['date_from' => $from->toDateString(), 'date_to' => $to->toDateString()],
+            'generatedAt' => now()->format('d/m/Y H:i'),
+            'generatedBy' => $request->user()->name,
+            'data' => $data,
+        ])->setPaper('letter');
+
+        return $pdf->stream("reporte-{$tab}.pdf");
+    }
+
+    /**
+     * @return array{tab: string, data: array<string, mixed>, from: CarbonInterface, to: CarbonInterface, branchId: ?int}
+     */
+    private function resolveTabData(Request $request): array
+    {
+        $user = $request->user();
+        $tab = in_array($request->string('tab')->toString(), self::TABS, true)
+            ? $request->string('tab')->toString()
+            : 'summary';
+        [$localFrom, $localTo] = $this->resolveDateRange($request);
+        $from = $localFrom->copy()->utc();
+        $to = $localTo->copy()->utc();
+        $branchId = $request->integer('branch_id') ?: null;
+
+        $data = match ($tab) {
+            'sales' => $this->salesData($user, $from, $to, $branchId),
+            'cash' => $this->cashData($user, $from, $to, $branchId),
+            'inventory' => $this->inventoryData($user, $branchId),
+            default => $this->summaryData($user, $from, $to, $branchId),
+        };
+
+        // from/to returned here are the company-local range (for display,
+        // e.g. the PDF header) — query methods above already received the
+        // UTC-converted versions, since timestamps are stored in UTC.
+        return ['tab' => $tab, 'data' => $data, 'from' => $localFrom, 'to' => $localTo, 'branchId' => $branchId];
     }
 
     /** @return array{0: CarbonInterface, 1: CarbonInterface} */

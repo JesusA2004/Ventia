@@ -133,7 +133,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'Contabilidad' => [
             'products.view', 'products.view-costs',
             'prices.view', 'prices.view-history', 'costs.view', 'costs.edit',
-            'customers.view', 'sales.view', 'cash.view',
+            'customers.view', 'sales.view', 'sales.reprint-ticket', 'cash.view',
             'inventory.view', 'inventory.view-costs', 'inventory.kardex',
             'reports.view', 'reports.export', 'audit.view', 'dashboard.view',
         ],

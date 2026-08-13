@@ -30,7 +30,7 @@ const props = defineProps<{
     filters: { search?: string };
 }>();
 
-const { can } = usePermissions();
+const { can, isSuperAdmin } = usePermissions();
 
 defineOptions({
     layout: {
@@ -95,7 +95,12 @@ function destroy(unit: Unit) {
             </template>
             <template #cell-actions="{ row }">
                 <div class="flex justify-end gap-1">
-                    <Tooltip v-if="can('units.manage') && !row.is_global">
+                    <Tooltip
+                        v-if="
+                            can('units.manage') &&
+                            (!row.is_global || isSuperAdmin)
+                        "
+                    >
                         <TooltipTrigger as-child>
                             <Button
                                 as-child
@@ -111,7 +116,10 @@ function destroy(unit: Unit) {
                         <TooltipContent>Editar unidad</TooltipContent>
                     </Tooltip>
                     <ConfirmationDialog
-                        v-if="can('units.manage') && !row.is_global"
+                        v-if="
+                            can('units.manage') &&
+                            (!row.is_global || isSuperAdmin)
+                        "
                         title="¿Eliminar unidad?"
                         :description="`No podrás eliminar «${row.name}» si tiene productos relacionados.`"
                         tooltip="Eliminar unidad"

@@ -11,6 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import type { PriceList } from '@/types';
 
 const props = defineProps<{
@@ -22,6 +23,7 @@ const form = useForm({
     code: props.priceList?.code ?? '',
     currency: props.priceList?.currency ?? 'MXN',
     priority: props.priceList?.priority ?? 0,
+    is_default: props.priceList?.is_default ?? false,
     status: props.priceList?.status ?? 'active',
 });
 
@@ -104,6 +106,16 @@ function submit() {
                         <SelectItem value="inactive">Inactivo</SelectItem>
                     </SelectContent>
                 </Select>
+            </FormField>
+            <FormField
+                label="Lista predeterminada de la empresa"
+                for="is_default"
+                tooltip="Se usa automáticamente para nuevos clientes que no elijan una lista de precios explícita. Solo puede haber una lista predeterminada por empresa."
+                :error="form.errors.is_default"
+            >
+                <div class="flex h-9 items-center">
+                    <Switch id="is_default" v-model="form.is_default" />
+                </div>
             </FormField>
         </div>
 

@@ -112,8 +112,9 @@ function submitMovement() {
                                     <Input
                                         v-model="movementForm.amount"
                                         type="number"
+                                        inputmode="decimal"
                                         min="0.01"
-                                        step="0.01"
+                                        step="1"
                                         placeholder="Monto"
                                         required
                                     />

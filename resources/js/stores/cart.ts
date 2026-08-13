@@ -71,7 +71,21 @@ export const useCartStore = defineStore('pos-cart', () => {
         return `${productId}:${variantId ?? 'base'}`;
     }
 
-    function addProduct(product: CartProduct, quantity = '1') {
+    type QuantityResult = { ok: boolean; message?: string };
+
+    function insufficientStockMessage(line: {
+        name: string;
+        sku: string;
+        stock: string | null;
+    }): string {
+        const available = Number(line.stock ?? 0);
+
+        return available > 0
+            ? `Solo hay ${available} unidades disponibles de ${line.name} (SKU ${line.sku}).`
+            : `${line.name} (SKU ${line.sku}) no tiene existencias disponibles.`;
+    }
+
+    function addProduct(product: CartProduct, quantity = '1'): QuantityResult {
         const variant = product.matched_variant_id
             ? product.variants.find((v) => v.id === product.matched_variant_id)
             : null;
@@ -80,14 +94,30 @@ export const useCartStore = defineStore('pos-cart', () => {
         const variantId = variant?.id ?? null;
         const key = lineKey(productId, variantId);
         const existing = lines.value.find((l) => l.key === key);
+        const stock = variant?.stock ?? product.stock;
 
         if (existing) {
-            existing.quantity = String(
-                Number(existing.quantity) + Number(quantity),
+            return updateQuantity(
+                key,
+                String(Number(existing.quantity) + Number(quantity)),
             );
-
-            return;
         }
+
+        if (stock !== null && Number(stock) <= 0) {
+            return {
+                ok: false,
+                message: insufficientStockMessage({
+                    name: product.name,
+                    sku: variant?.sku ?? product.sku,
+                    stock,
+                }),
+            };
+        }
+
+        const cappedQuantity =
+            stock !== null && Number(quantity) > Number(stock)
+                ? stock
+                : quantity;
 
         lines.value.push({
             key,
@@ -95,22 +125,45 @@ export const useCartStore = defineStore('pos-cart', () => {
             product_variant_id: variantId,
             name: product.name,
             sku: variant?.sku ?? product.sku,
-            quantity,
+            quantity: cappedQuantity,
             unit_price: variant?.sale_price ?? product.sale_price,
             allows_fraction: product.allows_fraction ?? false,
             discount_type: null,
             discount_value: null,
             notes: null,
-            stock: variant?.stock ?? product.stock,
+            stock,
         });
+
+        if (stock !== null && Number(quantity) > Number(stock)) {
+            return {
+                ok: false,
+                message: insufficientStockMessage({
+                    name: product.name,
+                    sku: variant?.sku ?? product.sku,
+                    stock,
+                }),
+            };
+        }
+
+        return { ok: true };
     }
 
-    function updateQuantity(key: string, quantity: string) {
+    function updateQuantity(key: string, quantity: string): QuantityResult {
         const line = lines.value.find((l) => l.key === key);
 
-        if (line) {
-            line.quantity = quantity;
+        if (!line) {
+            return { ok: true };
         }
+
+        if (line.stock !== null && Number(quantity) > Number(line.stock)) {
+            line.quantity = line.stock;
+
+            return { ok: false, message: insufficientStockMessage(line) };
+        }
+
+        line.quantity = quantity;
+
+        return { ok: true };
     }
 
     function setLineDiscount(

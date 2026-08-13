@@ -18,9 +18,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $code
  * @property string $currency
  * @property int $priority
+ * @property bool $is_default
  * @property Status $status
  */
-#[Fillable(['company_id', 'name', 'code', 'currency', 'priority', 'status'])]
+#[Fillable(['company_id', 'name', 'code', 'currency', 'priority', 'is_default', 'status'])]
 class PriceList extends Model
 {
     /** @use HasFactory<PriceListFactory> */
@@ -30,6 +31,7 @@ class PriceList extends Model
     {
         return [
             'status' => Status::class,
+            'is_default' => 'boolean',
         ];
     }
 

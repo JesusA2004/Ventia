@@ -116,7 +116,12 @@ function selectProduct(product: CartProduct) {
         return;
     }
 
-    cart.addProduct(product);
+    const result = cart.addProduct(product);
+
+    if (!result.ok && result.message) {
+        toast.error(result.message);
+    }
+
     grid.value?.focusBarcode();
 }
 
@@ -125,7 +130,15 @@ function selectVariant(variantId: number) {
         return;
     }
 
-    cart.addProduct({ ...pendingProduct.value, matched_variant_id: variantId });
+    const result = cart.addProduct({
+        ...pendingProduct.value,
+        matched_variant_id: variantId,
+    });
+
+    if (!result.ok && result.message) {
+        toast.error(result.message);
+    }
+
     pendingProduct.value = null;
 }
 
@@ -327,8 +340,9 @@ function applyGeneralDiscount() {
                 <Input
                     v-model="discountValue"
                     type="number"
+                    inputmode="decimal"
                     min="0"
-                    step="0.01"
+                    step="1"
                     placeholder="Valor"
                 />
             </div>

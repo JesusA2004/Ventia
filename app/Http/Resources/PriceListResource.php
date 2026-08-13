@@ -20,6 +20,7 @@ class PriceListResource extends JsonResource
             'code' => $this->code,
             'currency' => $this->currency,
             'priority' => $this->priority,
+            'is_default' => $this->is_default,
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
         ];

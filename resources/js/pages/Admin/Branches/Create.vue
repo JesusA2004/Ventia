@@ -4,6 +4,10 @@ import PageHeader from '@/components/PageHeader.vue';
 import { index } from '@/routes/settings/branches';
 import BranchForm from './BranchForm.vue';
 
+defineProps<{
+    suggestedCode: string;
+}>();
+
 defineOptions({
     layout: {
         breadcrumbs: [
@@ -22,6 +26,6 @@ defineOptions({
             title="Nueva sucursal"
             description="Registra una nueva sucursal de tu empresa."
         />
-        <BranchForm />
+        <BranchForm :suggested-code="suggestedCode" />
     </div>
 </template>

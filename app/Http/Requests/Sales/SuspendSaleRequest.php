@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Sales;
 
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class SuspendSaleRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('sales.suspend');
@@ -17,7 +20,7 @@ class SuspendSaleRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         return [
             'register_id' => ['required', Rule::exists('registers', 'id')->where('company_id', $companyId)],

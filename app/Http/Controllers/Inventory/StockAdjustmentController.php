@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductLot;
 use App\Models\ProductVariant;
 use App\Models\Warehouse;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -22,8 +23,10 @@ class StockAdjustmentController extends Controller
 {
     use GuardsBranchAccess;
 
-    public function __construct(private readonly AdjustStockAction $adjustStock)
-    {
+    public function __construct(
+        private readonly AdjustStockAction $adjustStock,
+        private readonly AuditLogger $audit,
+    ) {
         $this->middleware('can:inventory.adjust');
     }
 
@@ -65,6 +68,16 @@ class StockAdjustmentController extends Controller
         } catch (InsufficientStockException $e) {
             throw ValidationException::withMessages(['quantity' => $e->getMessage()]);
         }
+
+        $movementLabel = InventoryMovementType::from($request->validated('movement_type'))->label();
+        $this->audit->log(
+            'inventory', 'adjusted',
+            "Realizó un ajuste de inventario ({$movementLabel}) de {$request->validated('quantity')} en «{$product->name}» ({$product->sku}), almacén «{$warehouse->name}».",
+            $product,
+            newValues: ['warehouse' => $warehouse->name, 'movement_type' => $request->validated('movement_type'), 'quantity' => $request->validated('quantity')],
+            reason: $request->validated('reason'),
+            branchId: $warehouse->branch_id,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Ajuste de inventario registrado correctamente.']);
 

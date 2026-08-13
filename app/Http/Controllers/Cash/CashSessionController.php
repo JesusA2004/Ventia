@@ -18,6 +18,7 @@ use App\Http\Resources\CashMovementResource;
 use App\Http\Resources\CashSessionResource;
 use App\Models\CashRegister;
 use App\Models\CashSession;
+use App\Services\Audit\AuditLogger;
 use App\Services\Cash\CashSessionSummaryService;
 use App\Services\SettingsService;
 use App\Support\PaginatedResource;
@@ -39,6 +40,7 @@ class CashSessionController extends Controller
         private readonly CloseCashSessionAction $closeSession,
         private readonly RegisterCashMovementAction $registerMovement,
         private readonly CashSessionSummaryService $summary,
+        private readonly AuditLogger $audit,
     ) {}
 
     public function index(Request $request): Response
@@ -116,7 +118,7 @@ class CashSessionController extends Controller
             ->with(['register:id,name'])
             ->first();
 
-        return response()->json($session ? CashSessionResource::make($session) : null);
+        return response()->json(['data' => $session ? CashSessionResource::make($session) : null]);
     }
 
     public function show(CashSession $cashSession): Response
@@ -165,6 +167,15 @@ class CashSessionController extends Controller
         } catch (InvalidStateTransitionException $e) {
             throw ValidationException::withMessages(['counted_cash' => $e->getMessage()]);
         }
+
+        $registerName = $session->register?->name ?? $cashSession->register_id;
+        $this->audit->log(
+            'cash', 'closed',
+            "Cerró la caja «{$registerName}»".($session->difference !== null && (float) $session->difference !== 0.0 ? " con una diferencia de {$session->difference}." : '.'),
+            $session,
+            newValues: ['counted_cash' => (string) $session->counted_cash, 'difference' => (string) $session->difference],
+            branchId: $session->branch_id,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Caja cerrada correctamente.']);
 

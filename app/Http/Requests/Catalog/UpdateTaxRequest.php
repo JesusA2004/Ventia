@@ -4,11 +4,14 @@ namespace App\Http\Requests\Catalog;
 
 use App\Enums\Status;
 use App\Enums\TaxType;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateTaxRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('tax'));
@@ -24,7 +27,7 @@ class UpdateTaxRequest extends FormRequest
             'code' => [
                 'required', 'string', 'max:30',
                 Rule::unique('taxes', 'code')
-                    ->where('company_id', $this->user()->company_id)
+                    ->where('company_id', $this->activeCompanyId())
                     ->ignore($this->route('tax')),
             ],
             'rate' => ['required', 'numeric', 'min:0', 'max:100'],

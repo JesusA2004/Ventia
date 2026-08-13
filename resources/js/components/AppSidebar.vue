@@ -19,6 +19,7 @@ import {
     PackageSearch,
     Percent,
     ReceiptText,
+    ScrollText,
     Shield,
     ShoppingBag,
     ShoppingCart,
@@ -42,6 +43,7 @@ import {
 } from '@/components/ui/sidebar';
 import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
+import { index as auditIndex } from '@/routes/audit';
 import cash from '@/routes/cash';
 import { index as brandsIndex } from '@/routes/catalog/brands';
 import { index as categoriesIndex } from '@/routes/catalog/categories';
@@ -67,7 +69,7 @@ import { index as warehousesIndex } from '@/routes/settings/warehouses';
 import { index as usersIndex } from '@/routes/users';
 import type { NavItem } from '@/types';
 
-const { can } = usePermissions();
+const { can, isSuperAdmin } = usePermissions();
 
 /**
  * Grouping follows the simplified target layout: Principal, Operación,
@@ -284,6 +286,14 @@ const adminNavItems = computed<NavItem[]>(() => {
             title: 'Roles y permisos',
             href: rolesIndex(),
             icon: Shield,
+        });
+    }
+
+    if (isSuperAdmin.value) {
+        items.push({
+            title: 'Auditoría',
+            href: auditIndex(),
+            icon: ScrollText,
         });
     }
 

@@ -3,11 +3,14 @@
 namespace App\Http\Requests\Catalog;
 
 use App\Enums\Status;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdatePriceListRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('priceList'));
@@ -23,11 +26,12 @@ class UpdatePriceListRequest extends FormRequest
             'code' => [
                 'required', 'string', 'max:30',
                 Rule::unique('price_lists', 'code')
-                    ->where('company_id', $this->user()->company_id)
+                    ->where('company_id', $this->activeCompanyId())
                     ->ignore($this->route('priceList')),
             ],
             'currency' => ['required', 'string', 'size:3'],
             'priority' => ['integer', 'min:0'],
+            'is_default' => ['boolean'],
             'status' => ['required', Rule::enum(Status::class)],
         ];
     }

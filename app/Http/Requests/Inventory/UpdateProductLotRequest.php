@@ -3,12 +3,15 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Enums\Status;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\ProductLot;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateProductLotRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('lot'));
@@ -19,7 +22,7 @@ class UpdateProductLotRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         /** @var ProductLot $lot */
         $lot = $this->route('lot');

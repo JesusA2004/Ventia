@@ -4,12 +4,15 @@ namespace App\Http\Requests\Catalog;
 
 use App\Enums\Status;
 use App\Enums\UnitType;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\Unit;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreUnitRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', Unit::class);
@@ -30,7 +33,7 @@ class StoreUnitRequest extends FormRequest
             'base_unit_id' => [
                 'nullable',
                 Rule::exists('units', 'id')->where(fn ($query) => $query
-                    ->where('company_id', $this->user()->company_id)
+                    ->where('company_id', $this->activeCompanyId())
                     ->orWhereNull('company_id')),
             ],
             'status' => ['required', Rule::enum(Status::class)],

@@ -74,14 +74,14 @@ function submit() {
             <FormField
                 label="Código"
                 for="code"
-                required
                 :error="form.errors.code"
+                tooltip="Identificador corto y único dentro de la sucursal. Déjalo vacío para que se genere automáticamente (por ejemplo, CAJ-002)."
             >
                 <Input
                     id="code"
                     v-model="form.code"
-                    required
                     class="uppercase"
+                    placeholder="Automático si se deja vacío"
                 />
             </FormField>
             <FormField

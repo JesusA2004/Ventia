@@ -126,7 +126,7 @@ class CreateSaleAction
 
         $variant = null;
         if (! empty($item['product_variant_id'])) {
-            $variant = ProductVariant::query()->whereKey($item['product_variant_id'])->firstOrFail();
+            $variant = ProductVariant::query()->with('attributeValues')->whereKey($item['product_variant_id'])->firstOrFail();
 
             if ($variant->company_id !== $companyId || $variant->product_id !== $product->id) {
                 throw new InvalidArgumentException('La variante seleccionada no corresponde a este producto.');
@@ -179,11 +179,13 @@ class CreateSaleAction
         $primaryBarcode = ($variant ? $variant->barcodes()->where('is_primary', true)->first() : null)
             ?? $product->barcodes->firstWhere('is_primary', true);
 
+        $variantLabel = $variant?->attributeValues->pluck('value')->implode(' / ');
+
         return [
             'item' => [
                 'product_id' => $product->id,
                 'product_variant_id' => $variant?->id,
-                'product_name_snapshot' => $product->name,
+                'product_name_snapshot' => $variantLabel ? "{$product->name} / {$variantLabel}" : $product->name,
                 'sku_snapshot' => ($variant ?? $product)->sku,
                 'barcode_snapshot' => $primaryBarcode?->barcode,
                 'quantity' => $quantity,

@@ -97,6 +97,15 @@ async function submitBarcode() {
     emit('select', payload.data);
 }
 
+/**
+ * Only simple products report stock at the top level — variant-tracked
+ * products have null here and are gated per-variant in VariantPickerDialog
+ * instead, so a null stock must never be treated as "out of stock" here.
+ */
+function isOutOfStock(product: CartProduct): boolean {
+    return product.stock !== null && Number(product.stock) <= 0;
+}
+
 function focusBarcode() {
     nextTick(() => barcodeInput.value?.focus());
 }
@@ -183,7 +192,13 @@ defineExpose({ focusBarcode, focusSearch });
                     v-for="product in displayedProducts"
                     :key="product.id"
                     type="button"
-                    class="flex flex-col justify-between rounded-lg border p-3 text-left transition hover:border-primary hover:shadow-sm"
+                    class="flex flex-col justify-between rounded-lg border p-3 text-left transition hover:border-primary hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-transparent disabled:hover:shadow-none"
+                    :disabled="isOutOfStock(product)"
+                    :aria-label="
+                        isOutOfStock(product)
+                            ? `${product.name} — sin existencias`
+                            : product.name
+                    "
                     @click="emit('select', product)"
                 >
                     <div>
@@ -198,14 +213,8 @@ defineExpose({ focusBarcode, focusSearch });
                         <span class="font-semibold">{{
                             formatCurrency(product.sale_price)
                         }}</span>
-                        <Badge
-                            v-if="
-                                product.stock !== null &&
-                                Number(product.stock) <= 0
-                            "
-                            variant="destructive"
-                        >
-                            Sin stock
+                        <Badge v-if="isOutOfStock(product)" variant="destructive">
+                            Sin existencias
                         </Badge>
                         <Badge
                             v-else-if="

@@ -26,3 +26,4 @@ require __DIR__.'/cash.php';
 require __DIR__.'/pos.php';
 require __DIR__.'/help.php';
 require __DIR__.'/reports.php';
+require __DIR__.'/audit.php';

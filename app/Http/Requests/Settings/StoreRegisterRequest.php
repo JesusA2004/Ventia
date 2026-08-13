@@ -3,15 +3,26 @@
 namespace App\Http\Requests\Settings;
 
 use App\Enums\Status;
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\CashRegister;
+use App\Support\SequentialCodeGenerator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreRegisterRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', CashRegister::class);
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (! $this->filled('code') && $this->filled('branch_id')) {
+            $this->merge(['code' => SequentialCodeGenerator::next(CashRegister::class, 'CAJ', ['branch_id' => $this->input('branch_id')])]);
+        }
     }
 
     /**
@@ -22,7 +33,7 @@ class StoreRegisterRequest extends FormRequest
         return [
             'branch_id' => [
                 'required',
-                Rule::exists('branches', 'id')->where('company_id', $this->user()->company_id),
+                Rule::exists('branches', 'id')->where('company_id', $this->activeCompanyId()),
             ],
             'warehouse_id' => [
                 'nullable',
@@ -37,7 +48,7 @@ class StoreRegisterRequest extends FormRequest
             'has_cash_drawer' => ['boolean'],
             'assigned_user_id' => [
                 'nullable',
-                Rule::exists('users', 'id')->where('company_id', $this->user()->company_id),
+                Rule::exists('users', 'id')->where('company_id', $this->activeCompanyId()),
             ],
             'status' => ['required', Rule::enum(Status::class)],
         ];

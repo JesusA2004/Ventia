@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests\Catalog;
 
+use App\Http\Requests\Concerns\ResolvesActiveCompany;
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class ChangeProductPriceRequest extends FormRequest
 {
+    use ResolvesActiveCompany;
+
     public function authorize(): bool
     {
         return $this->user()->can('editPrice', $this->route('product'));
@@ -18,7 +21,7 @@ class ChangeProductPriceRequest extends FormRequest
      */
     public function rules(): array
     {
-        $companyId = $this->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         /** @var Product $product */
         $product = $this->route('product');

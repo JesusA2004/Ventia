@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, useForm } from '@inertiajs/vue3';
 import ProductController from '@/actions/App/Http/Controllers/Catalog/ProductController';
+import FormCurrencyInput from '@/components/forms/FormCurrencyInput.vue';
 import FormField from '@/components/forms/FormField.vue';
 import BarcodeBuilder from '@/components/products/BarcodeBuilder.vue';
 import type { BarcodeRow } from '@/components/products/BarcodeBuilder.vue';
@@ -304,62 +305,34 @@ function submit() {
 
             <TabsContent value="pricing" class="space-y-4 pt-4">
                 <div v-if="!product" class="grid gap-4 sm:grid-cols-2">
-                    <FormField
+                    <FormCurrencyInput
+                        id="cost"
+                        v-model="form.cost"
                         label="Costo inicial"
-                        for="cost"
                         required
                         :error="form.errors.cost"
-                    >
-                        <Input
-                            id="cost"
-                            v-model="form.cost"
-                            type="number"
-                            step="0.0001"
-                            min="0"
-                            required
-                        />
-                    </FormField>
-                    <FormField
+                    />
+                    <FormCurrencyInput
+                        id="sale_price"
+                        v-model="form.sale_price"
                         label="Precio de venta inicial"
-                        for="sale_price"
                         required
                         :error="form.errors.sale_price"
-                    >
-                        <Input
-                            id="sale_price"
-                            v-model="form.sale_price"
-                            type="number"
-                            step="0.0001"
-                            min="0"
-                            required
-                        />
-                    </FormField>
-                    <FormField
+                    />
+                    <FormCurrencyInput
+                        id="minimum_price"
+                        v-model="form.minimum_price"
                         label="Precio mínimo"
-                        for="minimum_price"
+                        tooltip="Precio más bajo al que un cajero puede vender este producto, incluso con descuento."
                         :error="form.errors.minimum_price"
-                    >
-                        <Input
-                            id="minimum_price"
-                            v-model="form.minimum_price"
-                            type="number"
-                            step="0.0001"
-                            min="0"
-                        />
-                    </FormField>
-                    <FormField
+                    />
+                    <FormCurrencyInput
+                        id="wholesale_price"
+                        v-model="form.wholesale_price"
                         label="Precio de mayoreo"
-                        for="wholesale_price"
+                        tooltip="Precio aplicado automáticamente para ventas por mayoreo, si el módulo de listas de precios lo utiliza."
                         :error="form.errors.wholesale_price"
-                    >
-                        <Input
-                            id="wholesale_price"
-                            v-model="form.wholesale_price"
-                            type="number"
-                            step="0.0001"
-                            min="0"
-                        />
-                    </FormField>
+                    />
                 </div>
                 <div v-else class="space-y-4">
                     <div
@@ -443,6 +416,7 @@ function submit() {
                         label="Permitir venta sin stock"
                         for="allows_negative_stock"
                         :error="form.errors.allows_negative_stock"
+                        tooltip="Permite vender este producto aunque el inventario disponible llegue a cero o quede negativo."
                     >
                         <div class="flex h-9 items-center">
                             <Switch

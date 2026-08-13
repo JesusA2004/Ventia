@@ -9,7 +9,9 @@ use App\Enums\CashSessionStatus;
 use App\Enums\InventoryMovementType;
 use App\Enums\PaymentMethodType;
 use App\Enums\SaleStatus;
+use App\Exceptions\InsufficientStockException;
 use App\Models\CashSession;
+use App\Models\InventoryBalance;
 use App\Models\PaymentMethod;
 use App\Models\ProductLot;
 use App\Models\Sale;
@@ -17,6 +19,7 @@ use App\Models\SaleItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\ActiveCompanyContext;
+use App\Services\Inventory\InventoryBalanceService;
 use App\Services\Sales\SalePaymentValidatorService;
 use App\Services\SettingsService;
 use App\Support\Decimal;
@@ -39,6 +42,7 @@ class CompleteSaleAction
         private readonly RegisterCashMovementAction $recordCashMovement,
         private readonly SettingsService $settings,
         private readonly ActiveCompanyContext $activeCompany,
+        private readonly InventoryBalanceService $balances,
     ) {}
 
     /**
@@ -76,6 +80,15 @@ class CompleteSaleAction
             $session = $this->resolveCashSession($data['cash_session_id'] ?? null, $companyId, $data['register_id'], $cashier);
 
             $sale = $this->createSale->execute([...$data, 'status' => SaleStatus::Draft], $cashier);
+
+            // Re-check stock against the server's current truth right before
+            // committing, since the cart the cashier built may be stale
+            // (another register could have sold the same items in the
+            // meantime). This reports every affected line at once; the
+            // row-locked check inside recordMovement() below remains the
+            // final concurrency-safe guard for the rare race that slips
+            // past here.
+            $this->assertSufficientStock($sale, $warehouse);
 
             $paymentMethods = PaymentMethod::query()->where('status', 'active')->get();
             $validated = $this->paymentValidator->validate($payments, (string) $sale->total, $paymentMethods);
@@ -171,6 +184,46 @@ class CompleteSaleAction
         }
 
         return $session;
+    }
+
+    /**
+     * Checks every line against the warehouse's current balance and reports
+     * all shortages together (not just the first one), using each item's
+     * sku_snapshot — which already carries the variant's own SKU, not the
+     * generic product SKU — so the message identifies the exact variant.
+     */
+    private function assertSufficientStock(Sale $sale, Warehouse $warehouse): void
+    {
+        $shortages = [];
+
+        foreach ($sale->items as $item) {
+            $product = $item->product;
+
+            if ($product->allows_negative_stock) {
+                continue;
+            }
+
+            $available = $product->tracking_type->usesLots()
+                ? (string) InventoryBalance::query()
+                    ->where('warehouse_id', $warehouse->id)
+                    ->where('product_id', $item->product_id)
+                    ->where('product_variant_id', $item->product_variant_id)
+                    ->sum('quantity')
+                : $this->balances->currentQuantity($warehouse->id, $item->product_id, $item->product_variant_id);
+
+            if (bccomp($available, $item->quantity, 4) < 0) {
+                $shortages[] = [
+                    'name' => $item->product_name_snapshot,
+                    'sku' => $item->sku_snapshot,
+                    'requested' => $item->quantity,
+                    'available' => $available,
+                ];
+            }
+        }
+
+        if ($shortages !== []) {
+            throw InsufficientStockException::forItems($shortages);
+        }
     }
 
     private function selectLot(SaleItem $item, int $warehouseId): ?ProductLot

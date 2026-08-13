@@ -65,6 +65,7 @@ export type PriceList = {
     code: string;
     currency: string;
     priority: number;
+    is_default: boolean;
     status: Status;
     status_label: string;
 };
