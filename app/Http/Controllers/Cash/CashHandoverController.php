@@ -13,6 +13,7 @@ use App\Http\Resources\CashHandoverResource;
 use App\Models\CashHandover;
 use App\Models\CashSession;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use App\Services\SettingsService;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,7 @@ class CashHandoverController extends Controller
     public function __construct(
         private readonly RequestCashHandoverAction $requestHandover,
         private readonly ResolveCashHandoverAction $resolveHandover,
+        private readonly AuditLogger $audit,
     ) {}
 
     /**
@@ -109,6 +111,16 @@ class CashHandoverController extends Controller
         } catch (InvalidStateTransitionException $e) {
             throw ValidationException::withMessages(['decision' => $e->getMessage()]);
         }
+
+        $decisionLabels = ['approve' => 'aprobó', 'reject' => 'rechazó', 'recount' => 'solicitó reconteo de'];
+        $decision = (string) $request->validated('decision');
+        $this->audit->log(
+            'cash', 'handover_resolved',
+            'El supervisor ' . ($decisionLabels[$decision] ?? $decision) . " la entrega de caja de {$cashHandover->cashier?->name}.",
+            $cashHandover,
+            reason: $request->validated('notes'),
+            branchId: $cashHandover->branch_id,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Entrega de caja resuelta correctamente.']);
 

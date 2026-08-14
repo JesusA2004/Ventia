@@ -21,13 +21,14 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatQuantity } from '@/lib/format';
 import { priceHistory as priceHistoryRoute } from '@/routes/products';
 import type {
     Brand,
     Category,
     Product,
     ProductAttribute,
+    ProductStockBalance,
     ProductType,
     Tax,
     TrackingType,
@@ -41,6 +42,8 @@ const props = defineProps<{
     unitOptions: Unit[];
     taxOptions: Tax[];
     attributeOptions: ProductAttribute[];
+    stockBalances?: ProductStockBalance[];
+    totalStock?: string;
 }>();
 
 const productTypes: { value: ProductType; label: string }[] = [
@@ -383,12 +386,49 @@ function submit() {
             </TabsContent>
 
             <TabsContent value="inventory" class="space-y-4 pt-4">
+                <div v-if="product" class="rounded-lg border bg-muted/30 p-4">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-medium">Existencia actual</p>
+                        <p class="text-lg font-semibold">
+                            {{ formatQuantity(totalStock ?? '0') }}
+                        </p>
+                    </div>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        Solo lectura: proviene de los movimientos de
+                        inventario reales. Para modificarla usa un ajuste,
+                        una transferencia, un conteo o una compra — nunca este
+                        formulario.
+                    </p>
+                    <ul
+                        v-if="stockBalances && stockBalances.length > 0"
+                        class="mt-3 space-y-1 border-t pt-3"
+                    >
+                        <li
+                            v-for="balance in stockBalances"
+                            :key="balance.warehouse_id"
+                            class="flex items-center justify-between text-sm"
+                        >
+                            <span class="text-muted-foreground">{{
+                                balance.warehouse_name
+                            }}</span>
+                            <span>{{ formatQuantity(balance.quantity) }}</span>
+                        </li>
+                    </ul>
+                    <p
+                        v-else
+                        class="mt-3 border-t pt-3 text-sm text-muted-foreground"
+                    >
+                        Sin existencias registradas en ningún almacén todavía.
+                    </p>
+                </div>
+
                 <div class="grid gap-4 sm:grid-cols-2">
                     <FormField
                         label="Stock mínimo"
                         for="minimum_stock"
                         required
                         :error="form.errors.minimum_stock"
+                        tooltip="Nivel de existencias a partir del cual el sistema considera que el producto tiene stock bajo. Este valor no agrega existencias al inventario: solo es un umbral de alerta."
                     >
                         <Input
                             id="minimum_stock"
@@ -403,6 +443,7 @@ function submit() {
                         label="Stock máximo"
                         for="maximum_stock"
                         :error="form.errors.maximum_stock"
+                        tooltip="Cantidad máxima o nivel de referencia deseado para este producto, útil para planear compras. Este valor no representa las existencias actuales."
                     >
                         <Input
                             id="maximum_stock"

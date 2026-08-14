@@ -15,6 +15,7 @@ use App\Http\Resources\StockCountResource;
 use App\Http\Resources\WarehouseResource;
 use App\Models\StockCount;
 use App\Models\Warehouse;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,7 @@ class StockCountController extends Controller
         private readonly CompleteStockCountAction $completeCount,
         private readonly ApplyStockCountAction $applyCount,
         private readonly CancelStockCountAction $cancelCount,
+        private readonly AuditLogger $audit,
     ) {
         $this->authorizeResource(StockCount::class, 'count');
     }
@@ -65,6 +67,13 @@ class StockCountController extends Controller
 
         $count = $this->startCount->execute($warehouse, $request->validated('products'), $request->validated('notes'), $request->user());
 
+        $this->audit->log(
+            'inventory', 'count_started',
+            "Inició el conteo {$count->folio} en «{$warehouse->name}».",
+            $count,
+            branchId: $warehouse->branch_id,
+        );
+
         Inertia::flash('toast', ['type' => 'success', 'message' => "Conteo {$count->folio} iniciado. Existencia esperada congelada."]);
 
         return to_route('inventory.counts.show', $count);
@@ -92,6 +101,8 @@ class StockCountController extends Controller
             fn () => $this->completeCount->execute($count, $request->validated('counted'), $request->user()),
             $count,
             'Conteo completado. Revisa las diferencias antes de aplicarlo.',
+            'count_completed',
+            "Completó el conteo {$count->folio}.",
         );
     }
 
@@ -103,6 +114,8 @@ class StockCountController extends Controller
             fn () => $this->applyCount->execute($count, request()->user()),
             $count,
             'Conteo aplicado: se generaron los ajustes de inventario correspondientes.',
+            'count_applied',
+            "Aplicó el conteo {$count->folio}: se generaron ajustes de inventario.",
         );
     }
 
@@ -110,16 +123,29 @@ class StockCountController extends Controller
     {
         $this->authorize('manage', $count);
 
-        return $this->handleTransition(fn () => $this->cancelCount->execute($count), $count, 'Conteo cancelado.');
+        return $this->handleTransition(
+            fn () => $this->cancelCount->execute($count),
+            $count,
+            'Conteo cancelado.',
+            'count_cancelled',
+            "Canceló el conteo {$count->folio}.",
+        );
     }
 
-    private function handleTransition(\Closure $action, StockCount $count, string $successMessage): RedirectResponse
-    {
+    private function handleTransition(
+        \Closure $action,
+        StockCount $count,
+        string $successMessage,
+        string $auditAction,
+        string $auditDescription,
+    ): RedirectResponse {
         try {
             $action();
         } catch (InvalidStateTransitionException $e) {
             throw ValidationException::withMessages(['status' => $e->getMessage()]);
         }
+
+        $this->audit->log('inventory', $auditAction, $auditDescription, $count, branchId: $count->warehouse?->branch_id);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $successMessage]);
 

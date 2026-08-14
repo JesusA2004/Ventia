@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import CompanyController from '@/actions/App/Http/Controllers/Settings/CompanyController';
+import FormColorInput from '@/components/forms/FormColorInput.vue';
 import FormField from '@/components/forms/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { isValidHex, readableForeground } from '@/lib/color';
 import { edit } from '@/routes/settings/company';
 import type { Company } from '@/types';
 
@@ -35,6 +39,19 @@ const form = useForm({
 function submit() {
     form.patch(CompanyController.update.url());
 }
+
+const previewPrimary = computed(() =>
+    isValidHex(form.primary_color) ? form.primary_color : '#0f172a',
+);
+const previewPrimaryForeground = computed(() =>
+    readableForeground(previewPrimary.value),
+);
+const previewSecondary = computed(() =>
+    isValidHex(form.secondary_color) ? form.secondary_color : '#64748b',
+);
+const previewSecondaryForeground = computed(() =>
+    readableForeground(previewSecondary.value),
+);
 </script>
 
 <template>
@@ -63,7 +80,12 @@ function submit() {
                 >
                     <Input id="legal_name" v-model="form.legal_name" />
                 </FormField>
-                <FormField label="RFC" for="tax_id" :error="form.errors.tax_id">
+                <FormField
+                    label="RFC"
+                    for="tax_id"
+                    :error="form.errors.tax_id"
+                    tooltip="Registro Federal de Contribuyentes de la empresa, usado en facturación y documentos fiscales."
+                >
                     <Input id="tax_id" v-model="form.tax_id" />
                 </FormField>
                 <FormField
@@ -92,6 +114,7 @@ function submit() {
                     for="currency"
                     required
                     :error="form.errors.currency"
+                    tooltip="Código de 3 letras de la moneda en la que se registran precios y ventas (por ejemplo, MXN, USD)."
                 >
                     <Input
                         id="currency"
@@ -105,31 +128,85 @@ function submit() {
                     for="timezone"
                     required
                     :error="form.errors.timezone"
+                    tooltip="Zona horaria usada para fechas y horarios de la empresa (por ejemplo, America/Mexico_City)."
                 >
                     <Input id="timezone" v-model="form.timezone" />
                 </FormField>
-                <FormField
-                    label="Color primario"
-                    for="primary_color"
-                    :error="form.errors.primary_color"
-                >
-                    <Input
+            </div>
+
+            <div class="space-y-4 rounded-lg border p-4">
+                <div>
+                    <p class="text-sm font-medium">Identidad visual</p>
+                    <p class="text-xs text-muted-foreground">
+                        Elige los colores de esta empresa gráficamente o
+                        escribe el código HEX si ya lo conoces.
+                    </p>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <FormColorInput
                         id="primary_color"
                         v-model="form.primary_color"
-                        placeholder="#0f172a"
+                        label="Color primario"
+                        :error="form.errors.primary_color"
+                        tooltip="Color principal de la interfaz: botones, enlaces y elementos destacados para esta empresa."
                     />
-                </FormField>
-                <FormField
-                    label="Color secundario"
-                    for="secondary_color"
-                    :error="form.errors.secondary_color"
-                >
-                    <Input
+                    <FormColorInput
                         id="secondary_color"
                         v-model="form.secondary_color"
-                        placeholder="#64748b"
+                        label="Color secundario"
+                        :error="form.errors.secondary_color"
+                        tooltip="Color de apoyo, usado en elementos secundarios de la interfaz."
                     />
-                </FormField>
+                </div>
+
+                <div class="space-y-2">
+                    <p class="text-xs font-medium text-muted-foreground">
+                        Vista previa
+                    </p>
+                    <div
+                        class="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 p-4"
+                    >
+                        <button
+                            type="button"
+                            class="rounded-md px-4 py-2 text-sm font-medium"
+                            :style="{
+                                backgroundColor: previewPrimary,
+                                color: previewPrimaryForeground,
+                            }"
+                        >
+                            Botón primario
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-md px-4 py-2 text-sm font-medium"
+                            :style="{
+                                backgroundColor: previewSecondary,
+                                color: previewSecondaryForeground,
+                            }"
+                        >
+                            Botón secundario
+                        </button>
+                        <Badge
+                            :style="{
+                                backgroundColor: previewPrimary,
+                                color: previewPrimaryForeground,
+                                borderColor: 'transparent',
+                            }"
+                        >
+                            Etiqueta
+                        </Badge>
+                        <div
+                            class="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm shadow-sm"
+                        >
+                            <span
+                                class="size-2.5 rounded-full"
+                                :style="{ backgroundColor: previewPrimary }"
+                            />
+                            {{ form.name || 'Nombre de la empresa' }}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <Button type="submit" :disabled="form.processing"

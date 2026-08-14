@@ -33,7 +33,9 @@ class AuditLogController extends Controller
 
     public function index(Request $request): Response
     {
-        $logs = AuditLog::query()
+        $search = $request->string('search')->toString();
+
+        $query = AuditLog::query()
             ->with(['company:id,name', 'branch:id,name'])
             ->when($request->date('date_from'), fn ($q, $date) => $q->whereDate('created_at', '>=', $date))
             ->when($request->date('date_to'), fn ($q, $date) => $q->whereDate('created_at', '<=', $date))
@@ -43,6 +45,14 @@ class AuditLogController extends Controller
             ->when($request->string('module')->toString(), fn ($q, $module) => $q->where('module', $module))
             ->when($request->string('action')->toString(), fn ($q, $action) => $q->where('action', $action))
             ->when($request->string('entity_type')->toString(), fn ($q, $type) => $q->where('entity_type', $type))
+            ->when($search, fn ($q) => $q->where(fn ($sub) => $sub
+                ->where('description', 'like', "%{$search}%")
+                ->orWhere('user_name', 'like', "%{$search}%")
+            ));
+
+        $total = (clone $query)->count();
+
+        $logs = $query
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate(25)
@@ -50,7 +60,8 @@ class AuditLogController extends Controller
 
         return Inertia::render('Audit/Index', [
             'logs' => PaginatedResource::make($logs, AuditLogResource::class),
-            'filters' => $request->only(['date_from', 'date_to', 'user_id', 'company_id', 'branch_id', 'module', 'action', 'entity_type']),
+            'total' => $total,
+            'filters' => $request->only(['search', 'date_from', 'date_to', 'user_id', 'company_id', 'branch_id', 'module', 'action', 'entity_type']),
             'filterOptions' => [
                 'companies' => Company::query()->orderBy('name')->get(['id', 'name']),
                 'branches' => Branch::query()->withoutGlobalScopes()->orderBy('name')->get(['id', 'name', 'company_id']),

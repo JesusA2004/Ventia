@@ -54,6 +54,15 @@ class PosController extends Controller
         }
 
         $generalPublic = Customer::query()->where('customer_type', 'general_public')->first();
+        $warehouseId = $session?->register?->warehouse_id ?? 0;
+
+        $favoriteProducts = Product::query()
+            ->where('status', 'active')
+            ->where('visible_in_pos', true)
+            ->where('is_favorite', true)
+            ->with(['unit', 'barcodes', 'variants.barcodes', 'variants.attributeValues.attribute'])
+            ->limit(24)
+            ->get();
 
         return Inertia::render('Pos/Index', [
             'session' => $session ? CashSessionResource::make($session) : null,
@@ -61,9 +70,9 @@ class PosController extends Controller
             'defaultCustomer' => $generalPublic ? CustomerResource::make($generalPublic) : null,
             'categoryOptions' => CategoryResource::collection(Category::query()->where('status', 'active')->orderBy('name')->get()),
             'paymentMethodOptions' => PaymentMethodResource::collection(PaymentMethod::query()->where('status', 'active')->orderBy('sort_order')->get()),
-            'favoriteProducts' => ProductResource::collection(
-                Product::query()->where('status', 'active')->where('visible_in_pos', true)->where('is_favorite', true)->with(['unit', 'barcodes'])->limit(24)->get()
-            ),
+            'favoriteProducts' => $favoriteProducts
+                ->map(fn (Product $product) => $this->productPayload($product, $warehouseId))
+                ->values(),
             'maxDiscountPercentage' => (string) ($this->settings->get($companyId, 'max_discount_percentage_without_authorization') ?? 10),
         ]);
     }

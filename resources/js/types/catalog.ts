@@ -97,6 +97,8 @@ export type ProductVariant = {
     attribute_value_ids?: number[];
     attribute_values?: ProductAttributeValue[];
     label?: string;
+    /** Only present when the request opted in with a `warehouse_id`. */
+    stock?: string;
 };
 
 export type BarcodeType =
@@ -161,6 +163,14 @@ export type Product = {
     barcodes?: ProductBarcode[];
     deleted_at: string | null;
     created_at: string;
+    /** Only present when the request opted in with a `warehouse_id`. */
+    stock?: string | null;
+};
+
+export type ProductStockBalance = {
+    warehouse_id: number;
+    warehouse_name: string;
+    quantity: string;
 };
 
 export type ProductPriceHistoryEntry = {

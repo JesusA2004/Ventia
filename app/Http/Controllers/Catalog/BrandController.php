@@ -7,6 +7,7 @@ use App\Http\Requests\Catalog\StoreBrandRequest;
 use App\Http\Requests\Catalog\UpdateBrandRequest;
 use App\Http\Resources\BrandResource;
 use App\Models\Brand;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class BrandController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->authorizeResource(Brand::class, 'brand');
     }
@@ -43,7 +44,9 @@ class BrandController extends Controller
 
     public function store(StoreBrandRequest $request): RedirectResponse
     {
-        Brand::create([...$request->validated(), 'slug' => str($request->validated('name'))->slug()]);
+        $brand = Brand::create([...$request->validated(), 'slug' => str($request->validated('name'))->slug()]);
+
+        $this->audit->log('brands', 'created', "Creó la marca «{$brand->name}».", $brand);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Marca creada correctamente.']);
 
@@ -59,7 +62,10 @@ class BrandController extends Controller
 
     public function update(UpdateBrandRequest $request, Brand $brand): RedirectResponse
     {
+        $before = $brand->only(['name', 'slug']);
         $brand->update([...$request->validated(), 'slug' => str($request->validated('name'))->slug()]);
+
+        $this->audit->log('brands', 'updated', "Actualizó la marca «{$brand->name}».", $brand, $before, $brand->only(['name', 'slug']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Marca actualizada correctamente.']);
 
@@ -74,7 +80,10 @@ class BrandController extends Controller
             ]);
         }
 
+        $name = $brand->name;
         $brand->delete();
+
+        $this->audit->log('brands', 'deleted', "Eliminó la marca «{$name}».", $brand);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Marca eliminada correctamente.']);
 

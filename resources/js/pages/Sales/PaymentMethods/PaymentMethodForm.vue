@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { CircleHelpIcon } from '@lucide/vue';
 import PaymentMethodController from '@/actions/App/Http/Controllers/Sales/PaymentMethodController';
 import FormField from '@/components/forms/FormField.vue';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PaymentMethod } from '@/types';
 
 const props = defineProps<{
@@ -119,18 +121,74 @@ function submit() {
             <label class="flex items-center gap-2 text-sm">
                 <Checkbox v-model="form.affects_cash" />
                 Afecta el efectivo físico de la caja
+                <Tooltip>
+                    <TooltipTrigger
+                        type="button"
+                        class="text-muted-foreground hover:text-foreground"
+                        aria-label="Ayuda: Afecta el efectivo físico de la caja"
+                    >
+                        <CircleHelpIcon class="size-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent
+                        >Los pagos con este método suman o restan del efectivo
+                        contado al cerrar la caja (por ejemplo, «Efectivo» sí
+                        afecta; «Transferencia» no).</TooltipContent
+                    >
+                </Tooltip>
             </label>
             <label class="flex items-center gap-2 text-sm">
                 <Checkbox v-model="form.allows_change" />
                 Permite calcular cambio
+                <Tooltip>
+                    <TooltipTrigger
+                        type="button"
+                        class="text-muted-foreground hover:text-foreground"
+                        aria-label="Ayuda: Permite calcular cambio"
+                    >
+                        <CircleHelpIcon class="size-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent
+                        >El POS puede calcular y mostrar el cambio a devolver
+                        cuando el pago recibido con este método excede el
+                        total.</TooltipContent
+                    >
+                </Tooltip>
             </label>
             <label class="flex items-center gap-2 text-sm">
                 <Checkbox v-model="form.requires_reference" />
                 Requiere referencia / datos de tarjeta
+                <Tooltip>
+                    <TooltipTrigger
+                        type="button"
+                        class="text-muted-foreground hover:text-foreground"
+                        aria-label="Ayuda: Requiere referencia / datos de tarjeta"
+                    >
+                        <CircleHelpIcon class="size-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent
+                        >El cajero deberá capturar un número de referencia,
+                        autorización o últimos dígitos de tarjeta al registrar
+                        el pago.</TooltipContent
+                    >
+                </Tooltip>
             </label>
             <label class="flex items-center gap-2 text-sm">
                 <Checkbox v-model="form.opens_cash_drawer" />
                 Abre el cajón de dinero
+                <Tooltip>
+                    <TooltipTrigger
+                        type="button"
+                        class="text-muted-foreground hover:text-foreground"
+                        aria-label="Ayuda: Abre el cajón de dinero"
+                    >
+                        <CircleHelpIcon class="size-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent
+                        >Al cobrar con este método se envía la señal para
+                        abrir físicamente el cajón de dinero conectado a la
+                        caja.</TooltipContent
+                    >
+                </Tooltip>
             </label>
         </div>
 

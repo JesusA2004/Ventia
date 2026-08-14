@@ -12,6 +12,7 @@ use App\Http\Resources\PriceListResource;
 use App\Http\Resources\SaleResource;
 use App\Models\Customer;
 use App\Models\PriceList;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +23,7 @@ use Inertia\Response;
 
 class CustomerController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->authorizeResource(Customer::class, 'customer');
     }
@@ -54,7 +55,9 @@ class CustomerController extends Controller
 
     public function store(StoreCustomerRequest $request): RedirectResponse
     {
-        Customer::create($request->validated());
+        $customer = Customer::create($request->validated());
+
+        $this->audit->log('customers', 'created', "Creó el cliente «{$customer->name}».", $customer);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Cliente creado correctamente.']);
 
@@ -71,7 +74,10 @@ class CustomerController extends Controller
 
     public function update(UpdateCustomerRequest $request, Customer $customer): RedirectResponse
     {
+        $before = $customer->only(['name', 'phone', 'email', 'credit_limit', 'status']);
         $customer->update($request->validated());
+
+        $this->audit->log('customers', 'updated', "Actualizó el cliente «{$customer->name}».", $customer, $before, $customer->only(['name', 'phone', 'email', 'credit_limit', 'status']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Cliente actualizado correctamente.']);
 
@@ -92,7 +98,10 @@ class CustomerController extends Controller
             ]);
         }
 
+        $name = $customer->name;
         $customer->delete();
+
+        $this->audit->log('customers', 'deleted', "Eliminó el cliente «{$name}».", $customer);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Cliente eliminado correctamente.']);
 

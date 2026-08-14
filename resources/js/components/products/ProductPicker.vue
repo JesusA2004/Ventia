@@ -14,6 +14,8 @@ import type { Product, ProductVariant } from '@/types';
 const props = defineProps<{
     /** Ranks products that track lots/caducidad first, without hiding the rest. */
     prioritizeLots?: boolean;
+    /** When set, results carry the real stock at this warehouse (same balance the backend enforces). */
+    warehouseId?: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -28,8 +30,8 @@ const errored = ref(false);
 const expandedProduct = ref<number | null>(null);
 
 watchDebounced(
-    search,
-    async (value) => {
+    [search, () => props.warehouseId],
+    async ([value]) => {
         if (!value) {
             results.value = [];
             errored.value = false;
@@ -47,6 +49,9 @@ watchDebounced(
                         search: value,
                         ...(props.prioritizeLots
                             ? { prioritize_lots: 1 }
+                            : {}),
+                        ...(props.warehouseId
+                            ? { warehouse_id: props.warehouseId }
                             : {}),
                     },
                 }),
@@ -138,10 +143,12 @@ function choose(product: Product, variant: ProductVariant | null = null) {
                         @click="choose(product)"
                     >
                         <span class="font-medium">{{ product.name }}</span>
-                        <span class="text-xs text-muted-foreground"
-                            >SKU {{ product.sku }} ·
-                            {{ product.sale_price }}</span
-                        >
+                        <span class="text-xs text-muted-foreground">
+                            SKU {{ product.sku }} · {{ product.sale_price }}
+                            <template v-if="warehouseId && product.stock !== undefined && product.stock !== null">
+                                · Disponible: {{ product.stock }}
+                            </template>
+                        </span>
                     </button>
                     <div
                         v-if="expandedProduct === product.id"
@@ -155,9 +162,12 @@ function choose(product: Product, variant: ProductVariant | null = null) {
                             @click="choose(product, variant)"
                         >
                             <span>{{ variant.label || variant.sku }}</span>
-                            <span class="text-muted-foreground"
-                                >SKU {{ variant.sku }}</span
-                            >
+                            <span class="text-muted-foreground">
+                                SKU {{ variant.sku }}
+                                <template v-if="warehouseId && variant.stock !== undefined">
+                                    · Disponible: {{ variant.stock }}
+                                </template>
+                            </span>
                         </button>
                     </div>
                 </div>

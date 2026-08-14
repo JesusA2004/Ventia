@@ -10,13 +10,17 @@ import type { CartProduct } from '@/stores/cart';
 
 const open = defineModel<boolean>('open', { default: false });
 
-defineProps<{ product: CartProduct | null }>();
+const props = defineProps<{ product: CartProduct | null }>();
 
 const emit = defineEmits<{ select: [variantId: number] }>();
 
 function choose(variantId: number) {
     emit('select', variantId);
     open.value = false;
+}
+
+function isOutOfStock(stock: string): boolean {
+    return !props.product?.allows_negative_stock && Number(stock) <= 0;
 }
 </script>
 
@@ -39,7 +43,7 @@ function choose(variantId: number) {
                     <button
                         type="button"
                         class="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-accent disabled:opacity-50"
-                        :disabled="Number(variant.stock) <= 0"
+                        :disabled="isOutOfStock(variant.stock)"
                         @click="choose(variant.id)"
                     >
                         <span>
@@ -58,9 +62,14 @@ function choose(variantId: number) {
                         <span class="text-sm">
                             {{ formatCurrency(variant.sale_price) }}
                             <span
-                                v-if="Number(variant.stock) <= 0"
+                                v-if="isOutOfStock(variant.stock)"
                                 class="block text-xs font-medium text-destructive"
                                 >Sin existencias</span
+                            >
+                            <span
+                                v-else-if="Number(variant.stock) <= 0"
+                                class="block text-xs font-medium text-muted-foreground"
+                                >Venta sin stock</span
                             >
                             <span
                                 v-else

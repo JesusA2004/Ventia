@@ -6,6 +6,7 @@ use App\Enums\Status;
 use App\Http\Resources\CompanyResource;
 use App\Models\Company;
 use App\Services\ActiveCompanyContext;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -33,7 +34,7 @@ class CompanySelectionController extends Controller
         ]);
     }
 
-    public function store(Request $request, ActiveCompanyContext $context): RedirectResponse
+    public function store(Request $request, ActiveCompanyContext $context, AuditLogger $audit): RedirectResponse
     {
         abort_unless($context->isSuperAdmin(), 403);
 
@@ -41,7 +42,11 @@ class CompanySelectionController extends Controller
             'company_id' => ['required', 'integer', Rule::exists('companies', 'id')->where('status', Status::Active->value)],
         ]);
 
+        $company = Company::query()->find((int) $validated['company_id']);
+
         $context->select((int) $validated['company_id']);
+
+        $audit->log('companies', 'active_company_changed', "Cambió la empresa activa a «{$company?->name}».", $company);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Empresa activa cambiada correctamente.']);
 

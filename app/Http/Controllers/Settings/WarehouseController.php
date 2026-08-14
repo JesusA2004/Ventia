@@ -9,6 +9,7 @@ use App\Http\Resources\BranchResource;
 use App\Http\Resources\WarehouseResource;
 use App\Models\Branch;
 use App\Models\Warehouse;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ use Inertia\Response;
 
 class WarehouseController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->authorizeResource(Warehouse::class, 'warehouse');
     }
@@ -49,7 +50,9 @@ class WarehouseController extends Controller
 
     public function store(StoreWarehouseRequest $request): RedirectResponse
     {
-        Warehouse::create($request->validated());
+        $warehouse = Warehouse::create($request->validated());
+
+        $this->audit->log('warehouses', 'created', "Creó el almacén «{$warehouse->name}» ({$warehouse->code}).", $warehouse, branchId: $warehouse->branch_id);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Almacén creado correctamente.']);
 
@@ -66,7 +69,10 @@ class WarehouseController extends Controller
 
     public function update(UpdateWarehouseRequest $request, Warehouse $warehouse): RedirectResponse
     {
+        $before = $warehouse->only(['name', 'type', 'allows_sale', 'status']);
         $warehouse->update($request->validated());
+
+        $this->audit->log('warehouses', 'updated', "Actualizó el almacén «{$warehouse->name}».", $warehouse, $before, $warehouse->only(['name', 'type', 'allows_sale', 'status']), branchId: $warehouse->branch_id);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Almacén actualizado correctamente.']);
 
@@ -75,7 +81,11 @@ class WarehouseController extends Controller
 
     public function destroy(Warehouse $warehouse): RedirectResponse
     {
+        $name = $warehouse->name;
+        $branchId = $warehouse->branch_id;
         $warehouse->delete();
+
+        $this->audit->log('warehouses', 'deleted', "Eliminó el almacén «{$name}».", $warehouse, branchId: $branchId);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Almacén eliminado correctamente.']);
 

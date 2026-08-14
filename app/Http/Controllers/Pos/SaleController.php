@@ -131,6 +131,13 @@ class SaleController extends Controller
             throw ValidationException::withMessages(['items' => $e->getMessage()]);
         }
 
+        $this->audit->log(
+            'sales', 'completed',
+            "Registró la venta {$sale->folio} por " . number_format((float) $sale->total, 2) . '.',
+            $sale,
+            branchId: $sale->branch_id,
+        );
+
         return response()->json(['data' => SaleResource::make($sale->load('items', 'payments.paymentMethod'))], 201);
     }
 
@@ -154,6 +161,13 @@ class SaleController extends Controller
         } catch (InvalidArgumentException $e) {
             throw ValidationException::withMessages(['items' => $e->getMessage()]);
         }
+
+        $this->audit->log(
+            'sales', 'suspended',
+            "Suspendió la venta {$sale->folio}.",
+            $sale,
+            branchId: $sale->branch_id,
+        );
 
         return response()->json(['data' => SaleResource::make($sale->load('items'))], 201);
     }
@@ -182,6 +196,13 @@ class SaleController extends Controller
             throw ValidationException::withMessages(['sale' => $e->getMessage()]);
         }
 
+        $this->audit->log(
+            'sales', 'resumed',
+            "Recuperó la venta suspendida {$sale->folio} (nuevo folio {$fresh->folio}).",
+            $fresh,
+            branchId: $fresh->branch_id,
+        );
+
         return response()->json(['data' => SaleResource::make($fresh->load('items'))]);
     }
 
@@ -193,7 +214,11 @@ class SaleController extends Controller
             throw ValidationException::withMessages(['sale' => 'Solo se pueden eliminar ventas suspendidas.']);
         }
 
+        $folio = $sale->folio;
+        $branchId = $sale->branch_id;
         $sale->delete();
+
+        $this->audit->log('sales', 'suspended_deleted', "Eliminó la venta suspendida {$folio}.", branchId: $branchId);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Venta suspendida eliminada.']);
 
@@ -232,6 +257,14 @@ class SaleController extends Controller
         } catch (InvalidArgumentException $e) {
             throw ValidationException::withMessages(['items' => $e->getMessage()]);
         }
+
+        $this->audit->log(
+            'sales', 'returned',
+            "Registró una devolución sobre la venta {$sale->folio}.",
+            $sale,
+            reason: $request->validated('reason'),
+            branchId: $sale->branch_id,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Devolución registrada correctamente.']);
 

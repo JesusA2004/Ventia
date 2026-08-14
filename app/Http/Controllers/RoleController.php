@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateRolePermissionsRequest;
+use App\Services\Audit\AuditLogger;
 use App\Support\PermissionLabels;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -12,7 +13,7 @@ use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->middleware('can:roles.manage');
     }
@@ -72,7 +73,16 @@ class RoleController extends Controller
             abort(403, 'El rol Superadministrador no es editable: tiene acceso total por diseño.');
         }
 
+        $before = $role->permissions()->pluck('name')->all();
         $role->syncPermissions($request->validated('permissions', []));
+
+        $this->audit->log(
+            'roles', 'permissions_updated',
+            "Actualizó los permisos del rol «{$role->name}».",
+            $role,
+            ['permissions' => $before],
+            ['permissions' => $request->validated('permissions', [])],
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Permisos del rol actualizados correctamente.']);
 

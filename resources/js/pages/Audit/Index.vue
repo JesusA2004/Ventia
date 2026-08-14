@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ScrollTextIcon } from '@lucide/vue';
+import { ScrollTextIcon, SearchIcon } from '@lucide/vue';
+import { ref, watch } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
 import SearchableSelect from '@/components/forms/SearchableSelect.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -8,13 +9,16 @@ import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
 import ServerDataTable from '@/components/tables/ServerDataTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { auditActionVariant } from '@/lib/auditBadges';
 import { formatDateTime } from '@/lib/format';
 import { index as auditIndex, show as auditShow } from '@/routes/audit';
 import type { AuditFilterOption, AuditLog, Branch, Company, Paginated } from '@/types';
 
 const props = defineProps<{
     logs: Paginated<AuditLog>;
+    total: number;
     filters: {
+        search?: string;
         date_from?: string;
         date_to?: string;
         user_id?: number;
@@ -43,10 +47,22 @@ const columns: DataTableColumn[] = [
     { key: 'created_at', label: 'Fecha' },
     { key: 'user_name', label: 'Usuario' },
     { key: 'module_label', label: 'Módulo' },
+    { key: 'action', label: 'Acción' },
     { key: 'description', label: 'Descripción' },
     { key: 'company_name', label: 'Empresa' },
     { key: 'actions', label: '', class: 'text-right' },
 ];
+
+const search = ref(props.filters.search ?? '');
+let searchHandle: ReturnType<typeof setTimeout> | null = null;
+
+watch(search, (value) => {
+    if (searchHandle) {
+        clearTimeout(searchHandle);
+    }
+
+    searchHandle = setTimeout(() => apply({ search: value || undefined }), 300);
+});
 
 function apply(partial: Record<string, string | number | undefined>) {
     router.get(
@@ -63,10 +79,29 @@ function apply(partial: Record<string, string | number | undefined>) {
     <div class="flex flex-col gap-6">
         <PageHeader
             title="Auditoría"
-            description="Registro de acciones importantes realizadas por los usuarios del sistema."
-        />
+            description="Consulta las acciones realizadas por los usuarios y revisa cambios sensibles del sistema."
+        >
+            <template #actions>
+                <p class="text-sm text-muted-foreground">
+                    {{ total }} {{ total === 1 ? 'movimiento' : 'movimientos' }}
+                </p>
+            </template>
+        </PageHeader>
 
         <div class="flex flex-wrap items-end gap-3">
+            <div class="grid gap-1.5">
+                <label class="text-xs text-muted-foreground">Buscar</label>
+                <div class="relative">
+                    <SearchIcon
+                        class="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+                    />
+                    <Input
+                        v-model="search"
+                        placeholder="Descripción o usuario..."
+                        class="w-56 pl-8"
+                    />
+                </div>
+            </div>
             <div class="grid gap-1.5">
                 <label class="text-xs text-muted-foreground">Desde</label>
                 <Input
@@ -179,6 +214,11 @@ function apply(partial: Record<string, string | number | undefined>) {
             </template>
             <template #cell-module_label="{ row }">
                 <Badge variant="outline">{{ row.module_label }}</Badge>
+            </template>
+            <template #cell-action="{ row }">
+                <Badge :variant="auditActionVariant(row.action)">{{
+                    row.action.replaceAll('_', ' ')
+                }}</Badge>
             </template>
             <template #cell-description="{ row }">
                 <span class="line-clamp-2 text-sm">{{ row.description }}</span>

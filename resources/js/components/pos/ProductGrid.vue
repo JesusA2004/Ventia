@@ -101,9 +101,32 @@ async function submitBarcode() {
  * Only simple products report stock at the top level — variant-tracked
  * products have null here and are gated per-variant in VariantPickerDialog
  * instead, so a null stock must never be treated as "out of stock" here.
+ * A product with "permitir venta sin stock" enabled must never be disabled
+ * by stock alone — the backend allows the sale to go negative for it, so
+ * the frontend must match that instead of blocking the add-to-cart action.
  */
 function isOutOfStock(product: CartProduct): boolean {
+    if (product.allows_negative_stock) {
+        return false;
+    }
+
     return product.stock !== null && Number(product.stock) <= 0;
+}
+
+function isLowStock(product: CartProduct): boolean {
+    return (
+        !product.allows_negative_stock &&
+        product.stock !== null &&
+        Number(product.stock) <= 5
+    );
+}
+
+function isOversold(product: CartProduct): boolean {
+    return (
+        product.allows_negative_stock === true &&
+        product.stock !== null &&
+        Number(product.stock) <= 0
+    );
 }
 
 function focusBarcode() {
@@ -216,13 +239,10 @@ defineExpose({ focusBarcode, focusSearch });
                         <Badge v-if="isOutOfStock(product)" variant="destructive">
                             Sin existencias
                         </Badge>
-                        <Badge
-                            v-else-if="
-                                product.stock !== null &&
-                                Number(product.stock) <= 5
-                            "
-                            variant="secondary"
-                        >
+                        <Badge v-else-if="isOversold(product)" variant="secondary">
+                            Venta sin stock
+                        </Badge>
+                        <Badge v-else-if="isLowStock(product)" variant="secondary">
                             Stock bajo
                         </Badge>
                     </div>

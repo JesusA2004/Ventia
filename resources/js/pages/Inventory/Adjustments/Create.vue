@@ -101,6 +101,7 @@ function submit() {
                     for="movement_type"
                     required
                     :error="form.errors.movement_type"
+                    tooltip="Define si el ajuste suma existencias al almacén (entrada) o las resta (salida, merma, daño, extravío)."
                 >
                     <Select v-model="form.movement_type">
                         <SelectTrigger id="movement_type" class="w-full">

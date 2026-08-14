@@ -8,6 +8,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { firstErrorMessage } from '@/lib/apiErrors';
 import sales from '@/routes/sales';
 import type { Sale } from '@/types';
 
@@ -62,9 +63,7 @@ async function resume(sale: Sale) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => null);
-        toast.error(
-            error?.errors?.sale?.[0] ?? 'No se pudo recuperar la venta.',
-        );
+        toast.error(firstErrorMessage(error, 'No se pudo recuperar la venta.'));
 
         return;
     }

@@ -8,6 +8,7 @@ use App\Http\Requests\Catalog\UpdateProductAttributeRequest;
 use App\Http\Resources\ProductAttributeResource;
 use App\Models\ProductAttribute;
 use App\Models\ProductAttributeValue;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class ProductAttributeController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->authorizeResource(ProductAttribute::class, 'attribute');
     }
@@ -37,7 +38,7 @@ class ProductAttributeController extends Controller
 
     public function store(StoreProductAttributeRequest $request): RedirectResponse
     {
-        DB::transaction(function () use ($request) {
+        $attribute = DB::transaction(function () use ($request) {
             $attribute = ProductAttribute::create($request->safe()->except('values'));
 
             foreach ($request->validated('values', []) as $index => $value) {
@@ -47,7 +48,11 @@ class ProductAttributeController extends Controller
                     'sort_order' => $index,
                 ]);
             }
+
+            return $attribute;
         });
+
+        $this->audit->log('products', 'attribute_created', "Creó el atributo «{$attribute->name}».", $attribute);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Atributo creado correctamente.']);
 
@@ -88,6 +93,8 @@ class ProductAttributeController extends Controller
             $attribute->values()->whereNotIn('id', $keptIds)->delete();
         });
 
+        $this->audit->log('products', 'attribute_updated', "Actualizó el atributo «{$attribute->name}».", $attribute);
+
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Atributo actualizado correctamente.']);
 
         return to_route('products.attributes.index');
@@ -101,7 +108,10 @@ class ProductAttributeController extends Controller
             ]);
         }
 
+        $name = $attribute->name;
         $attribute->delete();
+
+        $this->audit->log('products', 'attribute_deleted', "Eliminó el atributo «{$name}».", $attribute);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Atributo eliminado correctamente.']);
 

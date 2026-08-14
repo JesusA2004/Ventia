@@ -7,6 +7,7 @@ use App\Http\Requests\Catalog\StoreTaxRequest;
 use App\Http\Requests\Catalog\UpdateTaxRequest;
 use App\Http\Resources\TaxResource;
 use App\Models\Tax;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class TaxController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->authorizeResource(Tax::class, 'tax');
     }
@@ -42,7 +43,9 @@ class TaxController extends Controller
 
     public function store(StoreTaxRequest $request): RedirectResponse
     {
-        Tax::create($request->validated());
+        $tax = Tax::create($request->validated());
+
+        $this->audit->log('taxes', 'created', "Creó el impuesto «{$tax->name}».", $tax);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Impuesto creado correctamente.']);
 
@@ -58,7 +61,10 @@ class TaxController extends Controller
 
     public function update(UpdateTaxRequest $request, Tax $tax): RedirectResponse
     {
+        $before = $tax->only(['name', 'rate', 'status']);
         $tax->update($request->validated());
+
+        $this->audit->log('taxes', 'updated', "Actualizó el impuesto «{$tax->name}».", $tax, $before, $tax->only(['name', 'rate', 'status']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Impuesto actualizado correctamente.']);
 
@@ -73,7 +79,10 @@ class TaxController extends Controller
             ]);
         }
 
+        $name = $tax->name;
         $tax->delete();
+
+        $this->audit->log('taxes', 'deleted', "Eliminó el impuesto «{$name}».", $tax);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Impuesto eliminado correctamente.']);
 

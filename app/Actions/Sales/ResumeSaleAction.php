@@ -43,7 +43,9 @@ class ResumeSaleAction
                 $available = $this->balances->currentQuantity($sale->warehouse_id, $item->product_id, $item->product_variant_id);
 
                 if (bccomp($available, $item->quantity, 4) < 0 && ! $product->allows_negative_stock) {
-                    throw new InvalidArgumentException("Stock insuficiente para «{$product->name}» al recuperar la venta.");
+                    throw new InvalidArgumentException(
+                        "Solo hay {$available} unidades disponibles de «{$product->name}» (SKU {$item->sku_snapshot}). Se solicitaban {$item->quantity} al recuperar la venta."
+                    );
                 }
 
                 return [

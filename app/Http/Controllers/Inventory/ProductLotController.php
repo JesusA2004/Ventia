@@ -12,6 +12,7 @@ use App\Http\Resources\ProductLotResource;
 use App\Http\Resources\WarehouseResource;
 use App\Models\ProductLot;
 use App\Models\Warehouse;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,8 +25,10 @@ class ProductLotController extends Controller
 {
     use GuardsBranchAccess;
 
-    public function __construct(private readonly RecordInventoryMovementAction $recorder)
-    {
+    public function __construct(
+        private readonly RecordInventoryMovementAction $recorder,
+        private readonly AuditLogger $audit,
+    ) {
         $this->authorizeResource(ProductLot::class, 'lot');
     }
 
@@ -85,6 +88,8 @@ class ProductLotController extends Controller
             return $lot;
         });
 
+        $this->audit->log('inventory', 'lot_created', "Creó el lote «{$lot->lot_number}» ({$lot->product->name}).", $lot);
+
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lote creado correctamente.']);
 
         return to_route('inventory.lots.edit', $lot);
@@ -99,7 +104,10 @@ class ProductLotController extends Controller
 
     public function update(UpdateProductLotRequest $request, ProductLot $lot): RedirectResponse
     {
+        $before = $lot->only(['lot_number', 'expiration_date', 'cost', 'status']);
         $lot->update($request->validated());
+
+        $this->audit->log('inventory', 'lot_updated', "Actualizó el lote «{$lot->lot_number}».", $lot, $before, $lot->only(['lot_number', 'expiration_date', 'cost', 'status']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lote actualizado correctamente.']);
 
@@ -114,7 +122,10 @@ class ProductLotController extends Controller
             ]);
         }
 
+        $lotNumber = $lot->lot_number;
         $lot->delete();
+
+        $this->audit->log('inventory', 'lot_deleted', "Eliminó el lote «{$lotNumber}».", $lot);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lote eliminado correctamente.']);
 

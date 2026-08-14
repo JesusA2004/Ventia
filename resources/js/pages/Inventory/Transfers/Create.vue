@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import { Trash2Icon } from '@lucide/vue';
+import { computed, watch } from 'vue';
+import { toast } from 'vue-sonner';
 import StockTransferController from '@/actions/App/Http/Controllers/Inventory/StockTransferController';
 import FormField from '@/components/forms/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -48,7 +50,10 @@ type ItemRow = {
     product_id: number;
     product_variant_id: number | null;
     label: string;
+    sku: string;
     quantity_requested: string;
+    /** Stock at the selected origin warehouse when the product was added; null when untracked (e.g. variants base). */
+    available: string | null;
 };
 
 const form = useForm({
@@ -58,17 +63,60 @@ const form = useForm({
     items: [] as ItemRow[],
 });
 
+const originWarehouseName = computed(
+    () =>
+        props.warehouseOptions.find((w) => w.id === form.origin_warehouse_id)
+            ?.name ?? 'el almacén de origen',
+);
+
+// The available quantities shown while picking come from the origin
+// warehouse at the moment of selection — switching origin mid-edit would
+// leave stale numbers on already-added rows, so start over instead of
+// silently showing wrong availability.
+watch(
+    () => form.origin_warehouse_id,
+    () => {
+        if (form.items.length > 0) {
+            form.items = [];
+            toast.info(
+                'Se reiniciaron los productos: cambiaste el almacén de origen.',
+            );
+        }
+    },
+);
+
 function addItem(product: Product, variant: ProductVariant | null) {
+    const available = variant?.stock ?? product.stock ?? null;
+
+    if (available !== undefined && available !== null && Number(available) <= 0) {
+        toast.error(
+            `${product.name} (SKU ${variant?.sku ?? product.sku}) no tiene existencias disponibles en ${originWarehouseName.value}.`,
+        );
+
+        return;
+    }
+
     form.items.push({
         product_id: product.id,
         product_variant_id: variant?.id ?? null,
         label: variant ? `${product.name} — ${variant.label}` : product.name,
-        quantity_requested: '1',
+        sku: variant?.sku ?? product.sku,
+        quantity_requested: available ?? '1',
+        available: available ?? null,
     });
 }
 
 function removeItem(index: number) {
     form.items.splice(index, 1);
+}
+
+function onQuantityInput(item: ItemRow) {
+    if (item.available !== null && Number(item.quantity_requested) > Number(item.available)) {
+        item.quantity_requested = item.available;
+        toast.error(
+            `Solo hay ${item.available} unidades disponibles de ${item.label} (SKU ${item.sku}) en ${originWarehouseName.value}.`,
+        );
+    }
 }
 
 function submit() {
@@ -141,7 +189,14 @@ function submit() {
 
             <div class="space-y-2">
                 <p class="text-sm font-medium">Productos a transferir</p>
-                <ProductPicker @select="addItem" />
+                <ProductPicker
+                    :warehouse-id="form.origin_warehouse_id"
+                    @select="addItem"
+                />
+                <p class="text-xs text-muted-foreground">
+                    Las cantidades disponibles corresponden a
+                    {{ originWarehouseName }}.
+                </p>
 
                 <div
                     v-if="form.items.length > 0"
@@ -151,6 +206,7 @@ function submit() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Producto</TableHead>
+                                <TableHead>Disponible</TableHead>
                                 <TableHead>Cantidad</TableHead>
                                 <TableHead class="text-right">Quitar</TableHead>
                             </TableRow>
@@ -160,14 +216,25 @@ function submit() {
                                 v-for="(item, index) in form.items"
                                 :key="index"
                             >
-                                <TableCell>{{ item.label }}</TableCell>
+                                <TableCell>
+                                    {{ item.label }}
+                                    <span
+                                        class="block font-mono text-xs text-muted-foreground"
+                                        >SKU {{ item.sku }}</span
+                                    >
+                                </TableCell>
+                                <TableCell class="text-sm text-muted-foreground">
+                                    {{ item.available ?? '—' }}
+                                </TableCell>
                                 <TableCell>
                                     <Input
                                         v-model="item.quantity_requested"
                                         type="number"
                                         step="0.0001"
                                         min="0.0001"
+                                        :max="item.available ?? undefined"
                                         class="w-28"
+                                        @change="onQuantityInput(item)"
                                     />
                                 </TableCell>
                                 <TableCell class="text-right">

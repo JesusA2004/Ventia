@@ -104,6 +104,7 @@ function submit() {
                 label="Decimales permitidos"
                 for="decimal_places"
                 :error="form.errors.decimal_places"
+                tooltip="Cuántos dígitos después del punto decimal se permiten al capturar cantidades de esta unidad (por ejemplo, 2 permite 1.25 kg)."
             >
                 <Input
                     id="decimal_places"
@@ -117,6 +118,7 @@ function submit() {
                 label="Unidad base (conversión)"
                 for="base_unit_id"
                 :error="form.errors.base_unit_id"
+                tooltip="Unidad a la que se puede convertir esta, usando el factor de conversión. Déjalo vacío si esta unidad no se convierte a otra."
             >
                 <Select v-model="form.base_unit_id">
                     <SelectTrigger id="base_unit_id" class="w-full">
@@ -138,6 +140,7 @@ function submit() {
                 label="Factor de conversión"
                 for="conversion_factor"
                 :error="form.errors.conversion_factor"
+                tooltip="Cuántas unidades base equivalen a 1 de esta unidad (por ejemplo, si la unidad base es 'Gramo', un factor de 1000 significa que 1 Kilogramo = 1000 Gramos)."
             >
                 <Input
                     id="conversion_factor"
@@ -167,6 +170,7 @@ function submit() {
                 label="Permite fracciones (a granel)"
                 for="allows_fraction"
                 :error="form.errors.allows_fraction"
+                tooltip="Actívalo para productos que se venden a granel (kg, litros, metros...), donde la cantidad puede tener decimales. Desactívalo para unidades que solo se venden en piezas completas."
             >
                 <div class="flex h-9 items-center">
                     <Switch

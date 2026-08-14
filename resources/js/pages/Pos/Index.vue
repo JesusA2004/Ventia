@@ -18,6 +18,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { firstErrorMessage } from '@/lib/apiErrors';
 import { index as posIndex } from '@/routes/pos';
 import sales from '@/routes/sales';
 import { useCartStore } from '@/stores/cart';
@@ -203,7 +204,7 @@ async function suspendSale() {
         if (!response.ok) {
             const error = await response.json().catch(() => null);
             toast.error(
-                error?.errors?.items?.[0] ?? 'No se pudo suspender la venta.',
+                firstErrorMessage(error, 'No se pudo suspender la venta.'),
             );
 
             return;
@@ -259,7 +260,12 @@ function applyGeneralDiscount() {
     >
         <div class="flex flex-col gap-3 overflow-hidden rounded-xl border p-4">
             <div class="flex items-center justify-between">
-                <h1 class="text-lg font-semibold">Punto de venta</h1>
+                <div>
+                    <h1 class="text-lg font-semibold">Punto de venta</h1>
+                    <p class="text-xs text-muted-foreground">
+                        Busca o escanea productos, arma el carrito y cobra.
+                    </p>
+                </div>
                 <div class="flex gap-2">
                     <Button
                         variant="outline"

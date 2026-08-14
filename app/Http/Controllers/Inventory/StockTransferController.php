@@ -8,6 +8,7 @@ use App\Actions\Inventory\CreateTransferAction;
 use App\Actions\Inventory\ReceiveTransferAction;
 use App\Actions\Inventory\ShipTransferAction;
 use App\Actions\Inventory\SubmitTransferAction;
+use App\Exceptions\InsufficientStockException;
 use App\Exceptions\InvalidStateTransitionException;
 use App\Http\Controllers\Concerns\GuardsBranchAccess;
 use App\Http\Controllers\Controller;
@@ -17,6 +18,7 @@ use App\Http\Resources\StockTransferResource;
 use App\Http\Resources\WarehouseResource;
 use App\Models\StockTransfer;
 use App\Models\Warehouse;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,6 +37,7 @@ class StockTransferController extends Controller
         private readonly ShipTransferAction $shipTransfer,
         private readonly ReceiveTransferAction $receiveTransfer,
         private readonly CancelTransferAction $cancelTransfer,
+        private readonly AuditLogger $audit,
     ) {
         $this->authorizeResource(StockTransfer::class, 'transfer');
     }
@@ -77,6 +80,13 @@ class StockTransferController extends Controller
             $request->user(),
         );
 
+        $this->audit->log(
+            'inventory', 'transfer_created',
+            "Creó la transferencia {$transfer->folio} ({$origin->name} → {$destination->name}).",
+            $transfer,
+            branchId: $origin->branch_id,
+        );
+
         Inertia::flash('toast', ['type' => 'success', 'message' => "Transferencia {$transfer->folio} creada como borrador."]);
 
         return to_route('inventory.transfers.show', $transfer);
@@ -102,21 +112,39 @@ class StockTransferController extends Controller
     {
         $this->authorize('manage', $transfer);
 
-        return $this->handleTransition(fn () => $this->submitTransfer->execute($transfer), $transfer, 'Transferencia enviada a aprobación.');
+        return $this->handleTransition(
+            fn () => $this->submitTransfer->execute($transfer),
+            $transfer,
+            'Transferencia enviada a aprobación.',
+            'transfer_submitted',
+            "Envió a aprobación la transferencia {$transfer->folio}.",
+        );
     }
 
     public function approve(StockTransfer $transfer): RedirectResponse
     {
         $this->authorize('manage', $transfer);
 
-        return $this->handleTransition(fn () => $this->approveTransfer->execute($transfer, request()->user()), $transfer, 'Transferencia aprobada.');
+        return $this->handleTransition(
+            fn () => $this->approveTransfer->execute($transfer, request()->user()),
+            $transfer,
+            'Transferencia aprobada.',
+            'transfer_approved',
+            "Aprobó la transferencia {$transfer->folio}.",
+        );
     }
 
     public function ship(StockTransfer $transfer): RedirectResponse
     {
         $this->authorize('manage', $transfer);
 
-        return $this->handleTransition(fn () => $this->shipTransfer->execute($transfer, request()->user()), $transfer, 'Transferencia marcada en tránsito.');
+        return $this->handleTransition(
+            fn () => $this->shipTransfer->execute($transfer, request()->user()),
+            $transfer,
+            'Transferencia marcada en tránsito.',
+            'transfer_shipped',
+            "Marcó en tránsito la transferencia {$transfer->folio}.",
+        );
     }
 
     public function receive(ReceiveStockTransferRequest $request, StockTransfer $transfer): RedirectResponse
@@ -127,6 +155,8 @@ class StockTransferController extends Controller
             fn () => $this->receiveTransfer->execute($transfer, $request->validated('received'), $request->user()),
             $transfer,
             'Recepción registrada correctamente.',
+            'transfer_received',
+            "Registró la recepción de la transferencia {$transfer->folio}.",
         );
     }
 
@@ -134,16 +164,31 @@ class StockTransferController extends Controller
     {
         $this->authorize('manage', $transfer);
 
-        return $this->handleTransition(fn () => $this->cancelTransfer->execute($transfer), $transfer, 'Transferencia cancelada.');
+        return $this->handleTransition(
+            fn () => $this->cancelTransfer->execute($transfer),
+            $transfer,
+            'Transferencia cancelada.',
+            'transfer_cancelled',
+            "Canceló la transferencia {$transfer->folio}.",
+        );
     }
 
-    private function handleTransition(\Closure $action, StockTransfer $transfer, string $successMessage): RedirectResponse
-    {
+    private function handleTransition(
+        \Closure $action,
+        StockTransfer $transfer,
+        string $successMessage,
+        string $auditAction,
+        string $auditDescription,
+    ): RedirectResponse {
         try {
             $action();
         } catch (InvalidStateTransitionException $e) {
             throw ValidationException::withMessages(['status' => $e->getMessage()]);
+        } catch (InsufficientStockException $e) {
+            throw ValidationException::withMessages(['items' => $e->getMessage()]);
         }
+
+        $this->audit->log('inventory', $auditAction, $auditDescription, $transfer, branchId: $transfer->origin_branch_id);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $successMessage]);
 

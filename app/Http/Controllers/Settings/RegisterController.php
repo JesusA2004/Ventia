@@ -11,6 +11,7 @@ use App\Http\Resources\UserResource;
 use App\Models\Branch;
 use App\Models\CashRegister;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ use Inertia\Response;
 
 class RegisterController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->authorizeResource(CashRegister::class, 'register');
     }
@@ -49,7 +50,9 @@ class RegisterController extends Controller
 
     public function store(StoreRegisterRequest $request): RedirectResponse
     {
-        CashRegister::create($request->validated());
+        $register = CashRegister::create($request->validated());
+
+        $this->audit->log('registers', 'created', "Creó la caja «{$register->name}» ({$register->code}).", $register, branchId: $register->branch_id);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Caja creada correctamente.']);
 
@@ -66,7 +69,10 @@ class RegisterController extends Controller
 
     public function update(UpdateRegisterRequest $request, CashRegister $register): RedirectResponse
     {
+        $before = $register->only(['name', 'status', 'has_cash_drawer']);
         $register->update($request->validated());
+
+        $this->audit->log('registers', 'updated', "Actualizó la caja «{$register->name}».", $register, $before, $register->only(['name', 'status', 'has_cash_drawer']), branchId: $register->branch_id);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Caja actualizada correctamente.']);
 
@@ -75,7 +81,11 @@ class RegisterController extends Controller
 
     public function destroy(CashRegister $register): RedirectResponse
     {
+        $name = $register->name;
+        $branchId = $register->branch_id;
         $register->delete();
+
+        $this->audit->log('registers', 'deleted', "Eliminó la caja «{$name}».", $register, branchId: $branchId);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Caja eliminada correctamente.']);
 

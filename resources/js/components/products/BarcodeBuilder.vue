@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PlusIcon, Trash2Icon } from '@lucide/vue';
+import { CircleHelpIcon, PlusIcon, Trash2Icon } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,6 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { BarcodeType } from '@/types';
 
 export type BarcodeRow = {
@@ -74,7 +75,26 @@ function makePrimary(index: number) {
                     <TableRow>
                         <TableHead>Código</TableHead>
                         <TableHead>Tipo</TableHead>
-                        <TableHead>Multiplicador (caja/paquete)</TableHead>
+                        <TableHead>
+                            <span class="inline-flex items-center gap-1.5">
+                                Multiplicador (caja/paquete)
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        type="button"
+                                        class="text-muted-foreground hover:text-foreground"
+                                        aria-label="Ayuda: Multiplicador"
+                                    >
+                                        <CircleHelpIcon class="size-3.5" />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        >Indica cuántas unidades base representa
+                                        este código de barras cuando
+                                        corresponde a una caja o
+                                        paquete.</TooltipContent
+                                    >
+                                </Tooltip>
+                            </span>
+                        </TableHead>
                         <TableHead>Principal</TableHead>
                         <TableHead class="text-right">Quitar</TableHead>
                     </TableRow>

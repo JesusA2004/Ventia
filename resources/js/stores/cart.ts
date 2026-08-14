@@ -11,6 +11,7 @@ export type CartProduct = {
     unit_symbol?: string;
     allows_fraction?: boolean;
     stock: string | null;
+    allows_negative_stock?: boolean;
     matched_variant_id?: number | null;
     variants: {
         id: number;
@@ -34,6 +35,7 @@ export type CartLine = {
     discount_value: string | null;
     notes: string | null;
     stock: string | null;
+    allows_negative_stock: boolean;
 };
 
 export type CartPayment = {
@@ -95,6 +97,7 @@ export const useCartStore = defineStore('pos-cart', () => {
         const key = lineKey(productId, variantId);
         const existing = lines.value.find((l) => l.key === key);
         const stock = variant?.stock ?? product.stock;
+        const allowsNegativeStock = product.allows_negative_stock ?? false;
 
         if (existing) {
             return updateQuantity(
@@ -103,7 +106,7 @@ export const useCartStore = defineStore('pos-cart', () => {
             );
         }
 
-        if (stock !== null && Number(stock) <= 0) {
+        if (!allowsNegativeStock && stock !== null && Number(stock) <= 0) {
             return {
                 ok: false,
                 message: insufficientStockMessage({
@@ -115,7 +118,7 @@ export const useCartStore = defineStore('pos-cart', () => {
         }
 
         const cappedQuantity =
-            stock !== null && Number(quantity) > Number(stock)
+            !allowsNegativeStock && stock !== null && Number(quantity) > Number(stock)
                 ? stock
                 : quantity;
 
@@ -132,9 +135,10 @@ export const useCartStore = defineStore('pos-cart', () => {
             discount_value: null,
             notes: null,
             stock,
+            allows_negative_stock: allowsNegativeStock,
         });
 
-        if (stock !== null && Number(quantity) > Number(stock)) {
+        if (!allowsNegativeStock && stock !== null && Number(quantity) > Number(stock)) {
             return {
                 ok: false,
                 message: insufficientStockMessage({
@@ -155,7 +159,11 @@ export const useCartStore = defineStore('pos-cart', () => {
             return { ok: true };
         }
 
-        if (line.stock !== null && Number(quantity) > Number(line.stock)) {
+        if (
+            !line.allows_negative_stock &&
+            line.stock !== null &&
+            Number(quantity) > Number(line.stock)
+        ) {
             line.quantity = line.stock;
 
             return { ok: false, message: insufficientStockMessage(line) };
@@ -222,6 +230,7 @@ export const useCartStore = defineStore('pos-cart', () => {
             discount_value: null,
             notes: null,
             stock: null,
+            allows_negative_stock: false,
         }));
     }
 

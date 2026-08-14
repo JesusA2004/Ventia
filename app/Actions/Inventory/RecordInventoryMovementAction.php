@@ -62,7 +62,13 @@ class RecordInventoryMovementAction
             );
 
             if (bccomp($resulting, '0', 4) < 0 && ! $product->allows_negative_stock) {
-                throw InsufficientStockException::forBalance($previous);
+                throw InsufficientStockException::forBalance(
+                    available: $previous,
+                    requested: $quantity,
+                    productName: $product->name,
+                    sku: $product->sku,
+                    warehouseName: $warehouse->name,
+                );
             }
 
             return InventoryMovement::query()->create([

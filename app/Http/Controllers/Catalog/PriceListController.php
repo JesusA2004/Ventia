@@ -7,6 +7,7 @@ use App\Http\Requests\Catalog\StorePriceListRequest;
 use App\Http\Requests\Catalog\UpdatePriceListRequest;
 use App\Http\Resources\PriceListResource;
 use App\Models\PriceList;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ use Inertia\Response;
 
 class PriceListController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->authorizeResource(PriceList::class, 'priceList');
     }
@@ -44,13 +45,15 @@ class PriceListController extends Controller
 
     public function store(StorePriceListRequest $request): RedirectResponse
     {
-        DB::transaction(function () use ($request) {
+        $priceList = DB::transaction(function () use ($request) {
             if ($request->boolean('is_default')) {
                 PriceList::query()->update(['is_default' => false]);
             }
 
-            PriceList::create($request->validated());
+            return PriceList::create($request->validated());
         });
+
+        $this->audit->log('price-lists', 'created', "Creó la lista de precios «{$priceList->name}».", $priceList);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lista de precios creada correctamente.']);
 
@@ -66,6 +69,8 @@ class PriceListController extends Controller
 
     public function update(UpdatePriceListRequest $request, PriceList $priceList): RedirectResponse
     {
+        $before = $priceList->only(['name', 'priority', 'is_default', 'status']);
+
         DB::transaction(function () use ($request, $priceList) {
             if ($request->boolean('is_default')) {
                 PriceList::query()->whereKeyNot($priceList->id)->update(['is_default' => false]);
@@ -73,6 +78,8 @@ class PriceListController extends Controller
 
             $priceList->update($request->validated());
         });
+
+        $this->audit->log('price-lists', 'updated', "Actualizó la lista de precios «{$priceList->name}».", $priceList, $before, $priceList->only(['name', 'priority', 'is_default', 'status']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lista de precios actualizada correctamente.']);
 
@@ -87,7 +94,10 @@ class PriceListController extends Controller
             ]);
         }
 
+        $name = $priceList->name;
         $priceList->delete();
+
+        $this->audit->log('price-lists', 'deleted', "Eliminó la lista de precios «{$name}».", $priceList);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lista de precios eliminada correctamente.']);
 

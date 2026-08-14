@@ -7,6 +7,7 @@ use App\Http\Requests\Catalog\StoreUnitRequest;
 use App\Http\Requests\Catalog\UpdateUnitRequest;
 use App\Http\Resources\UnitResource;
 use App\Models\Unit;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class UnitController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->authorizeResource(Unit::class, 'unit');
     }
@@ -45,7 +46,9 @@ class UnitController extends Controller
 
     public function store(StoreUnitRequest $request): RedirectResponse
     {
-        Unit::create($request->validated());
+        $unit = Unit::create($request->validated());
+
+        $this->audit->log('units', 'created', "Creó la unidad «{$unit->name}».", $unit);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Unidad creada correctamente.']);
 
@@ -62,7 +65,10 @@ class UnitController extends Controller
 
     public function update(UpdateUnitRequest $request, Unit $unit): RedirectResponse
     {
+        $before = $unit->only(['name', 'symbol', 'allows_fraction', 'base_unit_id']);
         $unit->update($request->validated());
+
+        $this->audit->log('units', 'updated', "Actualizó la unidad «{$unit->name}».", $unit, $before, $unit->only(['name', 'symbol', 'allows_fraction', 'base_unit_id']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Unidad actualizada correctamente.']);
 
@@ -77,7 +83,10 @@ class UnitController extends Controller
             ]);
         }
 
+        $name = $unit->name;
         $unit->delete();
+
+        $this->audit->log('units', 'deleted', "Eliminó la unidad «{$name}».", $unit);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Unidad eliminada correctamente.']);
 

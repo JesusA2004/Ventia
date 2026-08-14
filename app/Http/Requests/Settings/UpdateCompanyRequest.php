@@ -30,9 +30,20 @@ class UpdateCompanyRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'currency' => ['required', 'string', 'size:3'],
             'timezone' => ['required', 'string', 'max:64'],
-            'primary_color' => ['nullable', 'string', 'max:20'],
-            'secondary_color' => ['nullable', 'string', 'max:20'],
+            'primary_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'secondary_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'status' => ['required', Rule::enum(Status::class)],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'primary_color.regex' => 'El color primario debe ser un color hexadecimal válido, por ejemplo #0EA5A4.',
+            'secondary_color.regex' => 'El color secundario debe ser un color hexadecimal válido, por ejemplo #64748B.',
         ];
     }
 }

@@ -9,6 +9,7 @@ use App\Http\Resources\UserResource;
 use App\Models\Branch;
 use App\Models\User;
 use App\Services\ActiveCompanyContext;
+use App\Services\Audit\AuditLogger;
 use App\Support\PaginatedResource;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -20,8 +21,10 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-    public function __construct(private readonly ActiveCompanyContext $activeCompany)
-    {
+    public function __construct(
+        private readonly ActiveCompanyContext $activeCompany,
+        private readonly AuditLogger $audit,
+    ) {
         $this->authorizeResource(User::class, 'user');
     }
 
@@ -54,7 +57,7 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        DB::transaction(function () use ($request) {
+        $user = DB::transaction(function () use ($request) {
             $user = User::create([
                 ...$request->safe()->except(['password', 'role', 'branch_ids']),
                 'company_id' => $this->activeCompany->requireCompanyId(),
@@ -64,7 +67,15 @@ class UserController extends Controller
 
             $user->syncRoles([$request->validated('role')]);
             $user->branches()->sync($request->validated('branch_ids', []));
+
+            return $user;
         });
+
+        $this->audit->log(
+            'users', 'created',
+            "Creó el usuario «{$user->name}» ({$user->email}) con rol {$request->validated('role')}.",
+            $user,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Usuario creado correctamente.']);
 
@@ -83,6 +94,8 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
+        $before = [...$user->only(['name', 'email', 'status']), 'role' => $user->roles->pluck('name')->first()];
+
         DB::transaction(function () use ($request, $user) {
             $user->update([
                 ...$request->safe()->except(['password', 'role', 'branch_ids']),
@@ -93,6 +106,14 @@ class UserController extends Controller
             $user->branches()->sync($request->validated('branch_ids', []));
         });
 
+        $this->audit->log(
+            'users', 'updated',
+            "Actualizó el usuario «{$user->name}» ({$user->email}).",
+            $user,
+            $before,
+            [...$user->only(['name', 'email', 'status']), 'role' => $request->validated('role')],
+        );
+
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Usuario actualizado correctamente.']);
 
         return to_route('users.index');
@@ -100,7 +121,11 @@ class UserController extends Controller
 
     public function destroy(User $user): RedirectResponse
     {
+        $name = $user->name;
+        $email = $user->email;
         $user->delete();
+
+        $this->audit->log('users', 'deactivated', "Desactivó al usuario «{$name}» ({$email}).", $user);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Usuario desactivado correctamente.']);
 

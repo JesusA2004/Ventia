@@ -17,12 +17,14 @@ use App\Http\Resources\TaxResource;
 use App\Http\Resources\UnitResource;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\InventoryBalance;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\Tax;
 use App\Models\Unit;
 use App\Services\ActiveCompanyContext;
 use App\Services\Audit\AuditLogger;
+use App\Services\Inventory\InventoryBalanceService;
 use App\Support\PaginatedResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -39,6 +41,7 @@ class ProductController extends Controller
         private readonly DuplicateProductAction $duplicateProduct,
         private readonly ActiveCompanyContext $activeCompany,
         private readonly AuditLogger $audit,
+        private readonly InventoryBalanceService $balances,
     ) {
         $this->authorizeResource(Product::class, 'product');
     }
@@ -87,8 +90,22 @@ class ProductController extends Controller
     {
         $product->load(['variants.attributeValues.attribute', 'barcodes']);
 
+        $balances = InventoryBalance::query()
+            ->where('product_id', $product->id)
+            ->with('warehouse:id,name')
+            ->get()
+            ->groupBy('warehouse_id')
+            ->map(fn ($rows) => [
+                'warehouse_id' => $rows->first()->warehouse_id,
+                'warehouse_name' => $rows->first()->warehouse?->name ?? 'Almacén',
+                'quantity' => (string) $rows->sum(fn ($row) => (float) $row->quantity),
+            ])
+            ->values();
+
         return Inertia::render('Products/Edit', [
             'product' => ProductResource::make($product),
+            'stockBalances' => $balances,
+            'totalStock' => (string) $balances->sum(fn ($b) => (float) $b['quantity']),
             ...$this->formOptions(),
         ]);
     }
@@ -113,7 +130,11 @@ class ProductController extends Controller
             ]);
         }
 
+        $name = $product->name;
+        $sku = $product->sku;
         $product->delete();
+
+        $this->audit->log('products', 'deleted', "Eliminó el producto «{$name}» ({$sku}).", $product);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Producto eliminado correctamente.']);
 
@@ -127,6 +148,8 @@ class ProductController extends Controller
 
         $model->restore();
 
+        $this->audit->log('products', 'restored', "Restauró el producto «{$model->name}» ({$model->sku}).", $model);
+
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Producto restaurado correctamente.']);
 
         return to_route('products.index');
@@ -137,6 +160,8 @@ class ProductController extends Controller
         $this->authorize('create', Product::class);
 
         $copy = $this->duplicateProduct->execute($product);
+
+        $this->audit->log('products', 'duplicated', "Duplicó el producto «{$product->name}» como «{$copy->sku}».", $copy);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "Producto duplicado como «{$copy->sku}». Revisa y actívalo."]);
 
@@ -177,7 +202,40 @@ class ProductController extends Controller
             ->limit(15)
             ->get();
 
-        return response()->json(['data' => ProductResource::collection($products)]);
+        $warehouseId = $request->integer('warehouse_id') ?: null;
+
+        if ($warehouseId === null) {
+            return response()->json(['data' => ProductResource::collection($products)]);
+        }
+
+        return response()->json([
+            'data' => $products->map(fn (Product $product) => $this->productWithStock($product, $warehouseId))->values(),
+        ]);
+    }
+
+    /**
+     * Attaches the same warehouse-scoped stock shape the POS uses (top-level
+     * `stock` for simple products, per-variant `stock` for variant-tracked
+     * ones) so every picker that opts in via `warehouse_id` shows the same
+     * numbers a sale or transfer would see — one balance query path, reused
+     * instead of re-derived per screen.
+     *
+     * @return array<string, mixed>
+     */
+    private function productWithStock(Product $product, int $warehouseId): array
+    {
+        $payload = ProductResource::make($product)->resolve();
+        $payload['stock'] = $product->tracking_type === TrackingType::Variants
+            ? null
+            : $this->balances->currentQuantity($warehouseId, $product->id);
+
+        $payload['variants'] = collect($payload['variants'])->map(function (array $variant) use ($product, $warehouseId) {
+            $variant['stock'] = $this->balances->currentQuantity($warehouseId, $product->id, $variant['id']);
+
+            return $variant;
+        })->values();
+
+        return $payload;
     }
 
     /**

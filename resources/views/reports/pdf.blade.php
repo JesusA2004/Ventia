@@ -19,6 +19,7 @@
         table.data caption { text-align: left; font-size: 12px; font-weight: bold; padding: 6px 0; }
         table.data th, table.data td { border: 1px solid #d9e2ec; padding: 5px 6px; font-size: 10px; text-align: left; }
         table.data th { background: #f0f4f8; }
+        .chart { margin-bottom: 20px; }
         .footer { position: fixed; bottom: -18px; left: 0; right: 0; font-size: 9px; color: #9aa5b1; text-align: center; }
     </style>
 </head>
@@ -57,6 +58,12 @@
                 </tr>
             @endforeach
         </table>
+    @endif
+
+    @if (!empty($chartSvg))
+        <div class="chart">
+            {!! $chartSvg !!}
+        </div>
     @endif
 
     @foreach ($data['tables'] ?? [] as $table)

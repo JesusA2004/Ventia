@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
 import ConfirmationDialog from '@/components/dialogs/ConfirmationDialog.vue';
+import TransferTimeline from '@/components/inventory/TransferTimeline.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -100,6 +101,8 @@ function submitReceive() {
                 </template>
             </ConfirmationDialog>
         </div>
+
+        <TransferTimeline :transfer="transfer" />
 
         <div class="overflow-x-auto rounded-lg border">
             <Table>

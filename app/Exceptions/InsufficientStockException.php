@@ -7,15 +7,22 @@ use RuntimeException;
 class InsufficientStockException extends RuntimeException
 {
     /**
-     * Low-level fallback used by RecordInventoryMovementAction, the single
-     * write path shared by sales, adjustments, transfers and counts — it
-     * only has a balance, not product context, so its message stays generic.
-     * CompleteSaleAction's pre-flight check (forItems()) is what produces
-     * the detailed, per-product message shown at POS checkout.
+     * Used by RecordInventoryMovementAction, the single write path shared by
+     * sales, adjustments, transfers and counts — every negative-stock
+     * rejection across those modules flows through here, so enriching this
+     * one message with product/warehouse context benefits all of them at
+     * once instead of duplicating messaging per caller.
      */
-    public static function forBalance(string $available): self
-    {
-        return new self("Stock insuficiente: disponible {$available}. Esta empresa no permite inventario negativo para este producto.");
+    public static function forBalance(
+        string $available,
+        string $requested,
+        string $productName,
+        string $sku,
+        string $warehouseName,
+    ): self {
+        return new self(
+            "Solo hay {$available} unidades disponibles de «{$productName}» (SKU {$sku}) en {$warehouseName}. Se solicitaban {$requested}."
+        );
     }
 
     /**

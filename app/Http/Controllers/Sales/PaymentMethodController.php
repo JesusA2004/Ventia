@@ -8,6 +8,7 @@ use App\Http\Requests\Sales\UpdatePaymentMethodRequest;
 use App\Http\Resources\PaymentMethodResource;
 use App\Models\PaymentMethod;
 use App\Models\SalePayment;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ use Inertia\Response;
 
 class PaymentMethodController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly AuditLogger $audit)
     {
         $this->authorizeResource(PaymentMethod::class, 'payment_method');
     }
@@ -41,7 +42,9 @@ class PaymentMethodController extends Controller
 
     public function store(StorePaymentMethodRequest $request): RedirectResponse
     {
-        PaymentMethod::create($request->validated());
+        $paymentMethod = PaymentMethod::create($request->validated());
+
+        $this->audit->log('payment-methods', 'created', "Creó el método de pago «{$paymentMethod->name}».", $paymentMethod);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Método de pago creado correctamente.']);
 
@@ -57,7 +60,10 @@ class PaymentMethodController extends Controller
 
     public function update(UpdatePaymentMethodRequest $request, PaymentMethod $paymentMethod): RedirectResponse
     {
+        $before = $paymentMethod->only(['name', 'status', 'sort_order']);
         $paymentMethod->update($request->validated());
+
+        $this->audit->log('payment-methods', 'updated', "Actualizó el método de pago «{$paymentMethod->name}».", $paymentMethod, $before, $paymentMethod->only(['name', 'status', 'sort_order']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Método de pago actualizado correctamente.']);
 
@@ -72,7 +78,10 @@ class PaymentMethodController extends Controller
             ]);
         }
 
+        $name = $paymentMethod->name;
         $paymentMethod->delete();
+
+        $this->audit->log('payment-methods', 'deleted', "Eliminó el método de pago «{$name}».", $paymentMethod);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Método de pago eliminado correctamente.']);
 

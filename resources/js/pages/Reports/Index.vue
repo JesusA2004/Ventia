@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { DownloadIcon, FileTextIcon } from '@lucide/vue';
+import { FileSpreadsheetIcon, FileTextIcon } from '@lucide/vue';
 import {
     ArcElement,
     BarElement,
@@ -15,8 +15,8 @@ import {
 } from 'chart.js';
 import { computed } from 'vue';
 import { Bar, Line } from 'vue-chartjs';
-import DateRangePicker from '@/components/filters/DateRangePicker.vue';
 import ChartCard from '@/components/dashboard/ChartCard.vue';
+import DateRangePicker from '@/components/filters/DateRangePicker.vue';
 import SearchableSelect from '@/components/forms/SearchableSelect.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
@@ -30,8 +30,8 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-    exportMethod as exportReport,
     exportPdf as exportReportPdf,
+    exportXlsx as exportReportXlsx,
     index as reportsIndex,
 } from '@/routes/reports';
 import type { Branch } from '@/types';
@@ -73,15 +73,15 @@ const chartOptions = {
     plugins: { legend: { display: false } },
 };
 
-/** Builds a chart dataset straight from a report table by title, using the first column as labels and the last as values — avoids a second round-trip for data already on the page. */
-function chartFromTable(title: string, color: string) {
+/** Builds a chart dataset straight from a report table by title, using the first column as labels and the last column (or an explicit index) as values — avoids a second round-trip for data already on the page. */
+function chartFromTable(title: string, color: string, columnIndex?: number) {
     const table = props.data.tables.find((t) => t.title === title);
 
     if (!table || table.rows.length === 0) {
         return null;
     }
 
-    const valueIndex = table.columns.length - 1;
+    const valueIndex = columnIndex ?? table.columns.length - 1;
 
     return {
         labels: table.rows.map((r) => String(r[0])),
@@ -100,6 +100,9 @@ function chartFromTable(title: string, color: string) {
 
 const salesOverTimeChart = computed(() =>
     chartFromTable('Ventas por período', '#4f46e5'),
+);
+const topProductsChart = computed(() =>
+    chartFromTable('Productos más vendidos', '#8b5cf6', 1),
 );
 const cashMovementsChart = computed(() =>
     chartFromTable('Movimientos de caja por tipo', '#f59e0b'),
@@ -142,13 +145,13 @@ function apply(partial: Record<string, string | number | undefined>) {
                 <Button variant="outline" as-child>
                     <a
                         :href="
-                            exportReport.url({
+                            exportReportXlsx.url({
                                 query: { tab, ...filters },
                             })
                         "
                     >
-                        <DownloadIcon />
-                        Exportar CSV
+                        <FileSpreadsheetIcon />
+                        Exportar Excel
                     </a>
                 </Button>
                 <Button variant="outline" as-child>
@@ -231,6 +234,17 @@ function apply(partial: Record<string, string | number | undefined>) {
             <Line
                 v-if="salesOverTimeChart"
                 :data="salesOverTimeChart"
+                :options="chartOptions"
+            />
+        </ChartCard>
+        <ChartCard
+            v-if="tab === 'sales'"
+            title="Productos más vendidos (unidades)"
+            :empty="!topProductsChart"
+        >
+            <Bar
+                v-if="topProductsChart"
+                :data="topProductsChart"
                 :options="chartOptions"
             />
         </ChartCard>

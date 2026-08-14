@@ -7,6 +7,7 @@ import type {
     Category,
     Product,
     ProductAttribute,
+    ProductStockBalance,
     Tax,
     Unit,
 } from '@/types';
@@ -19,6 +20,8 @@ const props = defineProps<{
     unitOptions: Unit[];
     taxOptions: Tax[];
     attributeOptions: ProductAttribute[];
+    stockBalances: ProductStockBalance[];
+    totalStock: string;
 }>();
 
 defineOptions({
@@ -46,6 +49,8 @@ defineOptions({
             :unit-options="unitOptions"
             :tax-options="taxOptions"
             :attribute-options="attributeOptions"
+            :stock-balances="stockBalances"
+            :total-stock="totalStock"
         />
     </div>
 </template>

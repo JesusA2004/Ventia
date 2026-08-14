@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             UnitSeeder::class,
             DemoDataSeeder::class,
+            SecondaryCompaniesSeeder::class,
             ProductCatalogSeeder::class,
             PaymentMethodSeeder::class,
             CustomerSeeder::class,

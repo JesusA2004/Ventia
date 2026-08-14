@@ -101,6 +101,13 @@ class CashSessionController extends Controller
             throw ValidationException::withMessages(['register_id' => $e->getMessage()]);
         }
 
+        $this->audit->log(
+            'cash', 'opened',
+            "Abrió la caja «{$register->name}» con {$session->opening_amount}.",
+            $session,
+            branchId: $register->branch_id,
+        );
+
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Caja abierta correctamente. Ya puedes comenzar a vender.']);
 
         return to_route('pos.index', ['cash_session' => $session->id]);
@@ -200,7 +207,7 @@ class CashSessionController extends Controller
         abort_unless($request->user()->can($permission), 403);
 
         try {
-            $this->registerMovement->execute(
+            $movement = $this->registerMovement->execute(
                 $cashSession,
                 $type,
                 (string) $request->validated('amount'),
@@ -211,6 +218,15 @@ class CashSessionController extends Controller
         } catch (InvalidStateTransitionException $e) {
             throw ValidationException::withMessages(['amount' => $e->getMessage()]);
         }
+
+        $movementLabels = ['deposit' => 'depósito', 'withdrawal' => 'retiro', 'expense' => 'gasto'];
+        $this->audit->log(
+            'cash', 'movement',
+            'Registró un ' . $movementLabels[$request->validated('type')] . " de {$request->validated('amount')} en caja.",
+            $movement,
+            reason: $request->validated('reason'),
+            branchId: $cashSession->branch_id,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Movimiento de caja registrado correctamente.']);
 
