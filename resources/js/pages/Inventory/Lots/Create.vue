@@ -125,6 +125,7 @@ function submit() {
                     for="cost"
                     required
                     :error="form.errors.cost"
+                    tooltip="Costo unitario de este lote. Si registras cantidad inicial, este costo se usa para valorizar el movimiento de inventario."
                 >
                     <Input
                         id="cost"

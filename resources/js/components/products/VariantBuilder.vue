@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Trash2Icon } from '@lucide/vue';
+import { CircleHelpIcon, Trash2Icon } from '@lucide/vue';
 import { computed, reactive } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ProductAttribute } from '@/types';
 
 export type VariantRow = {
@@ -184,8 +185,46 @@ const hasAttributes = computed(() => props.attributeOptions.length > 0);
                     <TableRow>
                         <TableHead>Combinación</TableHead>
                         <TableHead>SKU</TableHead>
-                        <TableHead>Costo</TableHead>
-                        <TableHead>Precio</TableHead>
+                        <TableHead>
+                            <span class="inline-flex items-center gap-1.5">
+                                Costo
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        type="button"
+                                        class="text-muted-foreground hover:text-foreground"
+                                        aria-label="Ayuda: Costo"
+                                    >
+                                        <CircleHelpIcon class="size-3.5" />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        >Costo inicial de esta variante.
+                                        Se precarga con el costo base del
+                                        producto y puede editarse por
+                                        variante.</TooltipContent
+                                    >
+                                </Tooltip>
+                            </span>
+                        </TableHead>
+                        <TableHead>
+                            <span class="inline-flex items-center gap-1.5">
+                                Precio
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        type="button"
+                                        class="text-muted-foreground hover:text-foreground"
+                                        aria-label="Ayuda: Precio"
+                                    >
+                                        <CircleHelpIcon class="size-3.5" />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        >Precio de venta inicial de esta
+                                        variante. Se precarga con el precio
+                                        base del producto y puede editarse
+                                        por variante.</TooltipContent
+                                    >
+                                </Tooltip>
+                            </span>
+                        </TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead class="text-right">Quitar</TableHead>
                     </TableRow>

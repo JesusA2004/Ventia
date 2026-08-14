@@ -75,6 +75,7 @@ function submit() {
                 for="type"
                 required
                 :error="form.errors.type"
+                tooltip="Clasifica la función del almacén (piso de venta, almacenamiento, devoluciones, dañados, tránsito). Se usa para reportes y para decidir qué almacenes pueden vender."
             >
                 <Select v-model="form.type">
                     <SelectTrigger id="type" class="w-full">

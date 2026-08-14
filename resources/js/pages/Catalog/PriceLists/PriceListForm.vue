@@ -58,6 +58,7 @@ function submit() {
                 for="code"
                 required
                 :error="form.errors.code"
+                tooltip="Identificador corto y único para esta lista de precios. Se usa internamente y en reportes."
             >
                 <Input
                     id="code"

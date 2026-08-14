@@ -81,12 +81,21 @@ class ProductController extends Controller
 
         $this->audit->log('products', 'created', "Creó el producto «{$product->name}» ({$product->sku}).", $product);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Producto creado correctamente.']);
+        // Redirect into "editar" (not the index) so the "Ajustar existencias"
+        // CTA in the Inventario tab is immediately available — that's the
+        // one supported path to give a brand-new product its existencia
+        // inicial, reusing the same AdjustStockAction as any other ajuste
+        // instead of a parallel "initial stock" code path.
+        $message = $product->product_type === 'service'
+            ? 'Producto creado correctamente.'
+            : 'Producto creado correctamente. Para registrar su inventario inicial, usa «Ajustar existencias» en la pestaña Inventario.';
 
-        return to_route('products.index');
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
+
+        return to_route('products.edit', $product);
     }
 
-    public function edit(Product $product): Response
+    public function edit(Request $request, Product $product): Response
     {
         $product->load(['variants.attributeValues.attribute', 'barcodes']);
 
@@ -106,6 +115,7 @@ class ProductController extends Controller
             'product' => ProductResource::make($product),
             'stockBalances' => $balances,
             'totalStock' => (string) $balances->sum(fn ($b) => (float) $b['quantity']),
+            'canAdjustInventory' => $request->user()->can('inventory.adjust'),
             ...$this->formOptions(),
         ]);
     }

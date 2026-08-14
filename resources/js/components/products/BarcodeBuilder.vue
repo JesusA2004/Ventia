@@ -73,7 +73,25 @@ function makePrimary(index: number) {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Código</TableHead>
+                        <TableHead>
+                            <span class="inline-flex items-center gap-1.5">
+                                Código
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        type="button"
+                                        class="text-muted-foreground hover:text-foreground"
+                                        aria-label="Ayuda: Código"
+                                    >
+                                        <CircleHelpIcon class="size-3.5" />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        >El valor real del código de barras
+                                        (lo que lee el lector o escáner al
+                                        pasarlo).</TooltipContent
+                                    >
+                                </Tooltip>
+                            </span>
+                        </TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>
                             <span class="inline-flex items-center gap-1.5">
@@ -95,7 +113,26 @@ function makePrimary(index: number) {
                                 </Tooltip>
                             </span>
                         </TableHead>
-                        <TableHead>Principal</TableHead>
+                        <TableHead>
+                            <span class="inline-flex items-center gap-1.5">
+                                Principal
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        type="button"
+                                        class="text-muted-foreground hover:text-foreground"
+                                        aria-label="Ayuda: Principal"
+                                    >
+                                        <CircleHelpIcon class="size-3.5" />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        >El código principal es el que se
+                                        imprime en etiquetas y se usa por
+                                        defecto para identificar el
+                                        producto.</TooltipContent
+                                    >
+                                </Tooltip>
+                            </span>
+                        </TableHead>
                         <TableHead class="text-right">Quitar</TableHead>
                     </TableRow>
                 </TableHeader>

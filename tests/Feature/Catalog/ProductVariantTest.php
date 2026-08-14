@@ -40,9 +40,11 @@ test('company admin can create a product with variants', function () {
         ],
     ]);
 
-    $response->assertRedirect(route('products.index'));
-
     $variant = ProductVariant::where('company_id', $company->id)->where('sku', 'VAR-BASE-ROJO')->first();
+
+    // Redirects into "editar" (not the index) so the "Ajustar existencias"
+    // CTA is immediately reachable for the newly created product.
+    $response->assertRedirect(route('products.edit', $variant->product_id));
     expect($variant)->not->toBeNull()
         ->and($variant->attributeValues()->pluck('product_attribute_values.id')->all())->toBe([$red->id]);
 });

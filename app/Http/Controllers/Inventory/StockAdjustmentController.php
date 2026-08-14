@@ -8,6 +8,7 @@ use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Concerns\GuardsBranchAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\StockAdjustmentRequest;
+use App\Http\Resources\ProductResource;
 use App\Http\Resources\WarehouseResource;
 use App\Models\Product;
 use App\Models\ProductLot;
@@ -15,6 +16,7 @@ use App\Models\ProductVariant;
 use App\Models\Warehouse;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,12 +32,23 @@ class StockAdjustmentController extends Controller
         $this->middleware('can:inventory.adjust');
     }
 
-    public function create(): Response
+    /**
+     * Supports an optional `?product_id=` query param so "Ajustar
+     * existencias" links from Producto → Inventario (or a freshly created
+     * product) land here with the product already selected, instead of
+     * making the user search for it again.
+     */
+    public function create(Request $request): Response
     {
+        $preselectedProduct = $request->integer('product_id')
+            ? Product::query()->with('variants')->find($request->integer('product_id'))
+            : null;
+
         return Inertia::render('Inventory/Adjustments/Create', [
             'warehouseOptions' => WarehouseResource::collection(Warehouse::query()->orderBy('name')->get()),
             'movementTypes' => collect(InventoryMovementType::manualAdjustmentTypes())
                 ->map(fn (InventoryMovementType $type) => ['value' => $type->value, 'label' => $type->label()]),
+            'preselectedProduct' => $preselectedProduct ? ProductResource::make($preselectedProduct) : null,
         ]);
     }
 

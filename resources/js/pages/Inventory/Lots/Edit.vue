@@ -115,6 +115,7 @@ function submit() {
                     for="cost"
                     required
                     :error="form.errors.cost"
+                    tooltip="Costo unitario de este lote, usado para valorizar el inventario asociado."
                 >
                     <Input
                         id="cost"

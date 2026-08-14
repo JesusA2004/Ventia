@@ -21,6 +21,7 @@ import type { Product, ProductVariant, Warehouse } from '@/types';
 const props = defineProps<{
     warehouseOptions: Warehouse[];
     movementTypes: { value: string; label: string }[];
+    preselectedProduct?: Product | null;
 }>();
 
 defineOptions({
@@ -29,12 +30,12 @@ defineOptions({
     },
 });
 
-const selectedProduct = ref<Product | null>(null);
+const selectedProduct = ref<Product | null>(props.preselectedProduct ?? null);
 const selectedVariant = ref<ProductVariant | null>(null);
 
 const form = useForm({
     warehouse_id: props.warehouseOptions[0]?.id ?? null,
-    product_id: null as number | null,
+    product_id: props.preselectedProduct?.id ?? null,
     product_variant_id: null as number | null,
     movement_type: props.movementTypes[0]?.value ?? 'adjustment_in',
     quantity: '',
@@ -65,13 +66,31 @@ function submit() {
 
         <form class="max-w-2xl space-y-6" @submit.prevent="submit">
             <FormField label="Producto" :error="form.errors.product_id">
-                <ProductPicker @select="onProductSelected" />
-                <p v-if="selectedProduct" class="text-sm text-muted-foreground">
-                    Seleccionado: {{ selectedProduct.name
-                    }}<span v-if="selectedVariant">
-                        — {{ selectedVariant.label }}</span
+                <div
+                    v-if="selectedProduct"
+                    class="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                >
+                    <span
+                        >{{ selectedProduct.name }} ({{
+                            selectedProduct.sku
+                        }})<span v-if="selectedVariant">
+                            — {{ selectedVariant.label }}</span
+                        ></span
                     >
-                </p>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        @click="
+                            selectedProduct = null;
+                            selectedVariant = null;
+                            form.product_id = null;
+                            form.product_variant_id = null;
+                        "
+                        >Cambiar</Button
+                    >
+                </div>
+                <ProductPicker v-else @select="onProductSelected" />
             </FormField>
 
             <div class="grid gap-4 sm:grid-cols-2">

@@ -64,6 +64,7 @@ function submit() {
                 for="code"
                 required
                 :error="form.errors.code"
+                tooltip="Identificador corto y único para este impuesto. Se usa internamente y en reportes."
             >
                 <Input
                     id="code"

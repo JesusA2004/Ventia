@@ -22,6 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency, formatQuantity } from '@/lib/format';
+import { create as adjustmentCreateRoute } from '@/routes/inventory/adjustments';
 import { priceHistory as priceHistoryRoute } from '@/routes/products';
 import type {
     Brand,
@@ -44,6 +45,7 @@ const props = defineProps<{
     attributeOptions: ProductAttribute[];
     stockBalances?: ProductStockBalance[];
     totalStock?: string;
+    canAdjustInventory?: boolean;
 }>();
 
 const productTypes: { value: ProductType; label: string }[] = [
@@ -148,6 +150,7 @@ function submit() {
                         label="Código interno"
                         for="internal_code"
                         :error="form.errors.internal_code"
+                        tooltip="Código propio de tu negocio para este producto, independiente del SKU y del código de barras. Opcional."
                     >
                         <Input
                             id="internal_code"
@@ -242,6 +245,7 @@ function submit() {
                         label="Impuesto"
                         for="tax_id"
                         :error="form.errors.tax_id"
+                        tooltip="Impuesto que se aplica a este producto al venderse en el POS. Déjalo sin impuesto si no aplica ninguno."
                     >
                         <Select v-model="form.tax_id">
                             <SelectTrigger id="tax_id" class="w-full">
@@ -314,6 +318,7 @@ function submit() {
                         label="Costo inicial"
                         required
                         :error="form.errors.cost"
+                        tooltip="Costo unitario de referencia para este producto. Los cambios posteriores de costo se registran por separado, con motivo e historial."
                     />
                     <FormCurrencyInput
                         id="sale_price"
@@ -387,11 +392,30 @@ function submit() {
 
             <TabsContent value="inventory" class="space-y-4 pt-4">
                 <div v-if="product" class="rounded-lg border bg-muted/30 p-4">
-                    <div class="flex items-center justify-between">
-                        <p class="text-sm font-medium">Existencia actual</p>
-                        <p class="text-lg font-semibold">
-                            {{ formatQuantity(totalStock ?? '0') }}
-                        </p>
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-sm font-medium">
+                                Existencia actual
+                            </p>
+                            <p class="text-lg font-semibold">
+                                {{ formatQuantity(totalStock ?? '0') }}
+                            </p>
+                        </div>
+                        <Button
+                            v-if="canAdjustInventory"
+                            as-child
+                            variant="outline"
+                            size="sm"
+                        >
+                            <Link
+                                :href="
+                                    adjustmentCreateRoute.url({
+                                        query: { product_id: product.id },
+                                    })
+                                "
+                                >Ajustar existencias</Link
+                            >
+                        </Button>
                     </div>
                     <p class="mt-1 text-xs text-muted-foreground">
                         Solo lectura: proviene de los movimientos de
@@ -419,6 +443,16 @@ function submit() {
                         class="mt-3 border-t pt-3 text-sm text-muted-foreground"
                     >
                         Sin existencias registradas en ningún almacén todavía.
+                        <Link
+                            v-if="canAdjustInventory"
+                            :href="
+                                adjustmentCreateRoute.url({
+                                    query: { product_id: product.id },
+                                })
+                            "
+                            class="font-medium text-primary underline underline-offset-2"
+                            >Registrar inventario inicial</Link
+                        >
                     </p>
                 </div>
 
@@ -489,6 +523,7 @@ function submit() {
                         label="Visible en POS"
                         for="visible_in_pos"
                         :error="form.errors.visible_in_pos"
+                        tooltip="Si está desactivado, el producto no aparece en el buscador del punto de venta aunque siga activo en el catálogo."
                     >
                         <div class="flex h-9 items-center">
                             <Switch
@@ -501,6 +536,7 @@ function submit() {
                         label="Favorito"
                         for="is_favorite"
                         :error="form.errors.is_favorite"
+                        tooltip="Los productos favoritos aparecen destacados o de acceso rápido en el punto de venta."
                     >
                         <div class="flex h-9 items-center">
                             <Switch

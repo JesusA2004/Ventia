@@ -57,6 +57,7 @@ function submit() {
                 for="code"
                 required
                 :error="form.errors.code"
+                tooltip="Identificador corto y único para este método de pago. Se usa internamente y en reportes."
             >
                 <Input id="code" v-model="form.code" required />
             </FormField>

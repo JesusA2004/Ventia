@@ -22,6 +22,7 @@ const props = defineProps<{
     attributeOptions: ProductAttribute[];
     stockBalances: ProductStockBalance[];
     totalStock: string;
+    canAdjustInventory: boolean;
 }>();
 
 defineOptions({
@@ -51,6 +52,7 @@ defineOptions({
             :attribute-options="attributeOptions"
             :stock-balances="stockBalances"
             :total-stock="totalStock"
+            :can-adjust-inventory="canAdjustInventory"
         />
     </div>
 </template>

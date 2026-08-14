@@ -98,9 +98,12 @@ test('company admin can create a product', function () {
         'status' => 'active',
     ]);
 
-    $response->assertRedirect(route('products.index'));
-
     $product = Product::where('company_id', $company->id)->where('sku', 'SKU-NEW')->first();
+
+    // Redirects into "editar" (not the index) so the "Ajustar existencias"
+    // CTA is immediately reachable for the newly created product.
+    $response->assertRedirect(route('products.edit', $product));
+
     expect($product)->not->toBeNull()
         ->and($product->cost)->toBe('10.5000')
         ->and($product->sale_price)->toBe('19.9900');

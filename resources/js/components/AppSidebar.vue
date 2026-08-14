@@ -16,6 +16,7 @@ import {
     LineChart,
     MapPin,
     Package,
+    PackagePlus,
     PackageSearch,
     Percent,
     ReceiptText,
@@ -51,6 +52,7 @@ import { index as taxesIndex } from '@/routes/catalog/taxes';
 import { index as unitsIndex } from '@/routes/catalog/units';
 import { index as customersIndex } from '@/routes/customers';
 import { gettingStarted, guide } from '@/routes/help';
+import { create as adjustmentsCreate } from '@/routes/inventory/adjustments';
 import { index as balancesIndex } from '@/routes/inventory/balances';
 import { index as countsIndex } from '@/routes/inventory/counts';
 import { index as kardexIndex } from '@/routes/inventory/kardex';
@@ -190,6 +192,14 @@ const inventoryNavItems = computed<NavItem[]>(() => {
             title: 'Movimientos',
             href: kardexIndex(),
             icon: ClipboardList,
+        });
+    }
+
+    if (can('inventory.adjust')) {
+        items.push({
+            title: 'Ajustes',
+            href: adjustmentsCreate(),
+            icon: PackagePlus,
         });
     }
 
