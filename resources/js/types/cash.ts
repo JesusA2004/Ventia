@@ -5,6 +5,7 @@ export type CashSession = {
     register_id: number;
     register_name?: string;
     branch_id: number;
+    branch_name?: string;
     user_id: number;
     user_name?: string;
     status: CashSessionStatus;

@@ -27,17 +27,29 @@ class SalesReportService
     public function __construct(private readonly ActiveCompanyContext $activeCompany) {}
 
     /**
+     * @param  'day'|'week'|'month'  $groupBy  Granularity of the "Ventas por período" breakdown. MariaDB/MySQL-specific DATE_FORMAT, matching this codebase's existing use of raw SQL date functions in report queries.
      * @return array{kpis: list<array{label: string, value: string}>, tables: list<array{title: string, columns: list<string>, rows: list<list<mixed>>}>}
      */
-    public function build(User $user, CarbonInterface $from, CarbonInterface $to, ?int $branchId): array
+    public function build(User $user, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters, string $groupBy = 'day'): array
     {
+        $periodExpression = match ($groupBy) {
+            'week' => "DATE_FORMAT(completed_at, '%x-W%v')",
+            'month' => "DATE_FORMAT(completed_at, '%Y-%m')",
+            default => 'DATE(completed_at)',
+        };
+
         $base = fn () => Sale::query()->accessibleBy($user)
-            ->when($branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+            ->when($filters->registerId, fn ($q, $id) => $q->where('sales.register_id', $id))
+            ->when($filters->cashierId, fn ($q, $id) => $q->where('sales.cashier_id', $id))
+            ->when($filters->paymentMethodId, fn ($q, $id) => $q->whereHas('payments', fn ($p) => $p->where('payment_method_id', $id)))
+            ->when($filters->productId, fn ($q, $id) => $q->whereHas('items', fn ($i) => $i->where('product_id', $id)))
+            ->when($filters->categoryId, fn ($q, $id) => $q->whereHas('items.product', fn ($i) => $i->where('category_id', $id)))
             ->whereBetween('sales.completed_at', [$from, $to])
             ->where('sales.status', SaleStatus::Completed);
 
         $byPeriod = (clone $base())
-            ->selectRaw('DATE(completed_at) as period, COUNT(*) as tickets, SUM(total) as total')
+            ->selectRaw("{$periodExpression} as period, COUNT(*) as tickets, SUM(total) as total")
             ->groupBy('period')->orderBy('period')->get();
 
         $byBranch = (clone $base())
@@ -61,7 +73,12 @@ class SalesReportService
             ->join('payment_methods', 'payment_methods.id', '=', 'sale_payments.payment_method_id')
             ->where('sales.company_id', $companyId)
             ->tap($restrictToAccessibleBranches)
-            ->when($branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+            ->when($filters->registerId, fn ($q, $id) => $q->where('sales.register_id', $id))
+            ->when($filters->cashierId, fn ($q, $id) => $q->where('sales.cashier_id', $id))
+            ->when($filters->paymentMethodId, fn ($q, $id) => $q->where('sale_payments.payment_method_id', $id))
+            ->when($filters->productId, fn ($q, $id) => $q->whereHas('sale.items', fn ($i) => $i->where('product_id', $id)))
+            ->when($filters->categoryId, fn ($q, $id) => $q->whereHas('sale.items.product', fn ($i) => $i->where('category_id', $id)))
             ->whereBetween('sales.completed_at', [$from, $to])
             ->where('sales.status', SaleStatus::Completed)
             ->selectRaw('payment_methods.name as label, COUNT(*) as tickets, SUM(sale_payments.amount) as total')
@@ -71,7 +88,12 @@ class SalesReportService
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
             ->where('sales.company_id', $companyId)
             ->tap($restrictToAccessibleBranches)
-            ->when($branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+            ->when($filters->registerId, fn ($q, $id) => $q->where('sales.register_id', $id))
+            ->when($filters->cashierId, fn ($q, $id) => $q->where('sales.cashier_id', $id))
+            ->when($filters->productId, fn ($q, $id) => $q->where('sale_items.product_id', $id))
+            ->when($filters->categoryId, fn ($q, $id) => $q->whereHas('product', fn ($p) => $p->where('category_id', $id)))
+            ->when($filters->paymentMethodId, fn ($q, $id) => $q->whereHas('sale.payments', fn ($p) => $p->where('payment_method_id', $id)))
             ->whereBetween('sales.completed_at', [$from, $to])
             ->where('sales.status', SaleStatus::Completed)
             ->selectRaw('sale_items.product_name_snapshot as label, SUM(sale_items.quantity) as quantity, SUM(sale_items.total) as total')

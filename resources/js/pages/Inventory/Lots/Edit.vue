@@ -58,6 +58,7 @@ function submit() {
                     for="lot_number"
                     required
                     :error="form.errors.lot_number"
+                    tooltip="Identificador del lote tal como aparece en el empaque o documento del proveedor."
                 >
                     <Input id="lot_number" v-model="form.lot_number" required />
                 </FormField>
@@ -66,6 +67,7 @@ function submit() {
                     for="status"
                     required
                     :error="form.errors.status"
+                    tooltip="Un lote inactivo deja de estar disponible para nuevos movimientos de inventario."
                 >
                     <Select v-model="form.status">
                         <SelectTrigger id="status" class="w-full">
@@ -81,6 +83,7 @@ function submit() {
                     label="Fecha de fabricación"
                     for="manufacture_date"
                     :error="form.errors.manufacture_date"
+                    tooltip="Fecha en que se fabricó este lote, si se conoce."
                 >
                     <Input
                         id="manufacture_date"
@@ -92,6 +95,7 @@ function submit() {
                     label="Fecha de caducidad"
                     for="expiration_date"
                     :error="form.errors.expiration_date"
+                    tooltip="Fecha límite de vida útil de este lote, usada para alertas de productos por caducar."
                 >
                     <Input
                         id="expiration_date"
@@ -103,6 +107,7 @@ function submit() {
                     label="Fecha de recepción"
                     for="received_at"
                     :error="form.errors.received_at"
+                    tooltip="Fecha en que este lote entró a tu inventario."
                 >
                     <Input
                         id="received_at"

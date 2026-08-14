@@ -49,6 +49,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre con el que este método de pago se mostrará en el punto de venta."
             >
                 <Input id="name" v-model="form.name" required autofocus />
             </FormField>
@@ -66,6 +67,7 @@ function submit() {
                 for="type"
                 required
                 :error="form.errors.type"
+                tooltip="Naturaleza del método de pago. Se usa para reportes y para aplicar reglas específicas (por ejemplo, tarjetas suelen requerir referencia)."
             >
                 <Select v-model="form.type">
                     <SelectTrigger id="type" class="w-full">
@@ -92,6 +94,7 @@ function submit() {
                 label="Orden"
                 for="sort_order"
                 :error="form.errors.sort_order"
+                tooltip="Posición de este método al mostrarlo en el punto de venta. Un número menor aparece primero."
             >
                 <Input
                     id="sort_order"
@@ -105,6 +108,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Un método inactivo deja de estar disponible para seleccionarse en el punto de venta."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">

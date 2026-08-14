@@ -140,6 +140,7 @@ function submit() {
                     for="origin"
                     required
                     :error="form.errors.origin_warehouse_id"
+                    tooltip="Almacén de donde saldrán los productos. Las cantidades disponibles mostradas corresponden a este almacén."
                 >
                     <Select v-model="form.origin_warehouse_id">
                         <SelectTrigger id="origin" class="w-full">
@@ -161,6 +162,7 @@ function submit() {
                     for="destination"
                     required
                     :error="form.errors.destination_warehouse_id"
+                    tooltip="Almacén al que llegarán los productos transferidos."
                 >
                     <Select v-model="form.destination_warehouse_id">
                         <SelectTrigger id="destination" class="w-full">
@@ -182,6 +184,7 @@ function submit() {
                     for="notes"
                     class="sm:col-span-2"
                     :error="form.errors.notes"
+                    tooltip="Detalles adicionales opcionales sobre esta transferencia."
                 >
                     <Textarea id="notes" v-model="form.notes" rows="2" />
                 </FormField>

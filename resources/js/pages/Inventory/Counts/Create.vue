@@ -97,6 +97,7 @@ function submit() {
                 for="warehouse_id"
                 required
                 :error="form.errors.warehouse_id"
+                tooltip="Almacén cuyo inventario físico se va a contar."
             >
                 <Select v-model="form.warehouse_id">
                     <SelectTrigger id="warehouse_id" class="w-full">
@@ -114,7 +115,12 @@ function submit() {
                 </Select>
             </FormField>
 
-            <FormField label="Notas" for="notes" :error="form.errors.notes">
+            <FormField
+                label="Notas"
+                for="notes"
+                :error="form.errors.notes"
+                tooltip="Detalles adicionales opcionales sobre este conteo."
+            >
                 <Textarea id="notes" v-model="form.notes" rows="2" />
             </FormField>
 

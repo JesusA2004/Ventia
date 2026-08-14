@@ -32,20 +32,46 @@ class CashHandoverController extends Controller
     ) {}
 
     /**
-     * Pending handovers waiting for a supervisor's review.
+     * Handovers, filterable by status. "Pendientes" is just the default
+     * filter over the same historical record — resolving one never deletes
+     * or moves it to another table, so "Aprobadas"/"Rechazadas"/"Todas" are
+     * views over the identical CashHandover rows.
      */
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', CashHandover::class);
 
+        // No status param (e.g. the sidebar link) defaults to the pending
+        // queue, the module's original behaviour; "Todas" is an explicit
+        // choice via ?status=all.
+        $status = $request->string('status')->toString();
+        $showAll = $status === 'all';
+        $validStatus = ! $showAll && in_array($status, array_map(fn ($c) => $c->value, CashHandoverStatus::cases()), true)
+            ? $status
+            : ($showAll ? null : CashHandoverStatus::Pending->value);
+
         $handovers = CashHandover::query()
-            ->with(['cashier:id,name', 'branch:id,name', 'cashSession:id,register_id,opening_amount', 'cashSession.register:id,name'])
-            ->where('status', CashHandoverStatus::Pending)
-            ->orderBy('requested_at')
-            ->paginate(15);
+            ->with(['cashier:id,name', 'approver:id,name', 'branch:id,name', 'cashSession:id,register_id,opening_amount', 'cashSession.register:id,name'])
+            ->when($validStatus, fn ($q, $s) => $q->where('status', $s))
+            ->orderByDesc('requested_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        $counts = CashHandover::query()
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
 
         return Inertia::render('Cash/Handovers/Index', [
             'handovers' => PaginatedResource::make($handovers, CashHandoverResource::class),
+            'filters' => ['status' => $showAll ? 'all' : $validStatus],
+            'statusCounts' => [
+                'all' => (int) $counts->sum(),
+                'pending' => (int) ($counts[CashHandoverStatus::Pending->value] ?? 0),
+                'approved' => (int) ($counts[CashHandoverStatus::Approved->value] ?? 0),
+                'rejected' => (int) ($counts[CashHandoverStatus::Rejected->value] ?? 0),
+                'recount_requested' => (int) ($counts[CashHandoverStatus::RecountRequested->value] ?? 0),
+            ],
         ]);
     }
 
@@ -54,7 +80,7 @@ class CashHandoverController extends Controller
         abort_unless((bool) ($settings->get($cashSession->company_id, 'cash_handover_required') ?? false), 404);
 
         try {
-            $this->requestHandover->execute(
+            $handover = $this->requestHandover->execute(
                 $cashSession,
                 $request->validated('denominations'),
                 $request->validated('cashier_notes'),
@@ -63,6 +89,13 @@ class CashHandoverController extends Controller
         } catch (InvalidStateTransitionException|\InvalidArgumentException $e) {
             throw ValidationException::withMessages(['denominations' => $e->getMessage()]);
         }
+
+        $this->audit->log(
+            'cash', 'handover_requested',
+            "{$request->user()->name} envió la entrega de caja de «{$cashSession->register?->name}» a revisión.",
+            $handover,
+            branchId: $cashSession->branch_id,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Entrega de caja enviada. Un supervisor debe revisarla para cerrar tu turno.']);
 

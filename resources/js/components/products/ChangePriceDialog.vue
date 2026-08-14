@@ -65,6 +65,7 @@ function submit() {
                     v-model="form.price"
                     label="Nuevo precio"
                     required
+                    tooltip="Nuevo precio de venta de este producto. Reemplaza al actual y queda registrado con fecha, usuario y motivo."
                     :error="form.errors.price"
                 />
                 <FormField
@@ -72,6 +73,7 @@ function submit() {
                     for="reason"
                     required
                     :error="form.errors.reason"
+                    tooltip="Explicación breve de por qué cambia el precio, visible en el historial de precios."
                 >
                     <Input
                         id="reason"

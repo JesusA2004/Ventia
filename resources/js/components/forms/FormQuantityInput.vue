@@ -16,6 +16,7 @@ withDefaults(
         id?: string;
         error?: string;
         help?: string;
+        tooltip?: string;
         required?: boolean;
         disabled?: boolean;
         min?: string;
@@ -25,6 +26,7 @@ withDefaults(
         id: undefined,
         error: undefined,
         help: undefined,
+        tooltip: undefined,
         required: false,
         disabled: false,
         min: '0',
@@ -36,7 +38,13 @@ const emit = defineEmits<{ 'update:modelValue': [string] }>();
 </script>
 
 <template>
-    <FormField :label="label" :for="id" :error="error" :required="required">
+    <FormField
+        :label="label"
+        :for="id"
+        :error="error"
+        :required="required"
+        :tooltip="tooltip"
+    >
         <div class="relative">
             <Input
                 :id="id"

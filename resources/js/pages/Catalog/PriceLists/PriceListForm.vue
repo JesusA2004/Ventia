@@ -44,6 +44,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre con el que identificarás esta lista de precios (por ejemplo, 'Mayoreo' o 'Clientes VIP')."
             >
                 <Input
                     id="name"
@@ -72,6 +73,7 @@ function submit() {
                 for="currency"
                 required
                 :error="form.errors.currency"
+                tooltip="Código de 3 letras de la moneda en la que se expresan los precios de esta lista (por ejemplo, MXN, USD)."
             >
                 <Input
                     id="currency"
@@ -84,6 +86,7 @@ function submit() {
                 label="Prioridad"
                 for="priority"
                 :error="form.errors.priority"
+                tooltip="Cuando un cliente puede usar varias listas, se aplica la de prioridad más alta."
             >
                 <Input
                     id="priority"
@@ -97,6 +100,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Una lista inactiva deja de estar disponible para asignarse a clientes."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">

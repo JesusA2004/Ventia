@@ -92,7 +92,25 @@ function makePrimary(index: number) {
                                 </Tooltip>
                             </span>
                         </TableHead>
-                        <TableHead>Tipo</TableHead>
+                        <TableHead>
+                            <span class="inline-flex items-center gap-1.5">
+                                Tipo
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        type="button"
+                                        class="text-muted-foreground hover:text-foreground"
+                                        aria-label="Ayuda: Tipo"
+                                    >
+                                        <CircleHelpIcon class="size-3.5" />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        >Formato o simbología del código de
+                                        barras (por ejemplo, EAN13, UPC,
+                                        CODE128).</TooltipContent
+                                    >
+                                </Tooltip>
+                            </span>
+                        </TableHead>
                         <TableHead>
                             <span class="inline-flex items-center gap-1.5">
                                 Multiplicador (caja/paquete)

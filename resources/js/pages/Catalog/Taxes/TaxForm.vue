@@ -50,6 +50,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre con el que este impuesto se mostrará en el punto de venta y en los tickets."
             >
                 <Input
                     id="name"
@@ -79,6 +80,7 @@ function submit() {
                 for="type"
                 required
                 :error="form.errors.type"
+                tooltip="Cómo se calcula este impuesto: como porcentaje del precio, como monto fijo, o exento (0%)."
             >
                 <Select v-model="form.type">
                     <SelectTrigger id="type" class="w-full">
@@ -100,6 +102,7 @@ function submit() {
                 for="rate"
                 required
                 :error="form.errors.rate"
+                tooltip="Porcentaje o monto que se aplica sobre el precio del producto para calcular este impuesto."
             >
                 <Input
                     id="rate"
@@ -115,6 +118,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Un impuesto inactivo deja de estar disponible para asignarse a productos nuevos."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">
@@ -130,6 +134,7 @@ function submit() {
                 label="Incluido en el precio"
                 for="included_in_price"
                 :error="form.errors.included_in_price"
+                tooltip="Si está activo, el precio del producto ya incluye este impuesto. Si está inactivo, el impuesto se suma al cobrar."
             >
                 <div class="flex h-9 items-center">
                     <Switch

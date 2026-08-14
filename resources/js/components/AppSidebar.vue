@@ -117,7 +117,7 @@ const operationNavItems = computed<NavItem[]>(() => {
 
     if (can('cash.approve-close') || can('cash.receive-handover')) {
         items.push({
-            title: 'Entregas pendientes',
+            title: 'Entregas de caja',
             href: cash.handovers.index(),
             icon: HandCoins,
         });

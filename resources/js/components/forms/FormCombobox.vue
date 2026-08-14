@@ -11,6 +11,7 @@ withDefaults(
         id?: string;
         error?: string;
         help?: string;
+        tooltip?: string;
         required?: boolean;
         disabled?: boolean;
         loading?: boolean;
@@ -22,6 +23,7 @@ withDefaults(
         id: undefined,
         error: undefined,
         help: undefined,
+        tooltip: undefined,
         required: false,
         disabled: false,
         loading: false,
@@ -35,7 +37,13 @@ const emit = defineEmits<{ 'update:modelValue': [string | null] }>();
 </script>
 
 <template>
-    <FormField :label="label" :for="id" :error="error" :required="required">
+    <FormField
+        :label="label"
+        :for="id"
+        :error="error"
+        :required="required"
+        :tooltip="tooltip"
+    >
         <SearchableSelect
             :model-value="modelValue"
             :options="options"

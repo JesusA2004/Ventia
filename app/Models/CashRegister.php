@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CashSessionStatus;
 use App\Enums\Status;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\BelongsToCompany;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -50,5 +52,16 @@ class CashRegister extends Model
     public function assignedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_user_id');
+    }
+
+    /**
+     * The currently open session for this register, if any. A register can
+     * only have one open session at a time (enforced in OpenCashSessionAction).
+     *
+     * @return HasOne<CashSession, $this>
+     */
+    public function openSession(): HasOne
+    {
+        return $this->hasOne(CashSession::class, 'register_id')->where('status', CashSessionStatus::Open);
     }
 }

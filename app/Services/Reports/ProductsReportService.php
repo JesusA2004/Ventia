@@ -27,7 +27,7 @@ class ProductsReportService
     /**
      * @return array{kpis: list<array{label: string, value: string}>, tables: list<array{title: string, columns: list<string>, rows: list<list<mixed>>}>}
      */
-    public function build(User $user, CarbonInterface $from, CarbonInterface $to, ?int $branchId): array
+    public function build(User $user, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
         $canViewCosts = $user->can('products.view-costs');
         $companyId = $this->activeCompany->requireCompanyId();
@@ -40,7 +40,12 @@ class ProductsReportService
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
             ->where('sales.company_id', $companyId)
             ->tap($restrictToAccessibleBranches)
-            ->when($branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+            ->when($filters->registerId, fn ($q, $id) => $q->where('sales.register_id', $id))
+            ->when($filters->cashierId, fn ($q, $id) => $q->where('sales.cashier_id', $id))
+            ->when($filters->productId, fn ($q, $id) => $q->where('sale_items.product_id', $id))
+            ->when($filters->categoryId, fn ($q, $id) => $q->whereHas('product', fn ($p) => $p->where('category_id', $id)))
+            ->when($filters->paymentMethodId, fn ($q, $id) => $q->whereHas('sale.payments', fn ($p) => $p->where('payment_method_id', $id)))
             ->whereBetween('sales.completed_at', [$from, $to])
             ->where('sales.status', SaleStatus::Completed);
 
@@ -67,14 +72,16 @@ class ProductsReportService
         $noMovement = Product::query()
             ->where('status', 'active')
             ->where('product_type', '!=', 'service')
-            ->whereNotExists(function ($query) use ($from, $to, $companyId, $branchId, $user) {
+            ->when($filters->productId, fn ($q, $id) => $q->where('id', $id))
+            ->when($filters->categoryId, fn ($q, $id) => $q->where('category_id', $id))
+            ->whereNotExists(function ($query) use ($from, $to, $companyId, $filters, $user) {
                 $query->selectRaw('1')
                     ->from('sale_items')
                     ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
                     ->whereColumn('sale_items.product_id', 'products.id')
                     ->where('sales.company_id', $companyId)
                     ->when(! $user->canAccessAllBranches(), fn ($q) => $q->whereIn('sales.branch_id', $user->branches()->pluck('branches.id')))
-                    ->when($branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+                    ->when($filters->branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
                     ->whereBetween('sales.completed_at', [$from, $to])
                     ->where('sales.status', SaleStatus::Completed);
             })

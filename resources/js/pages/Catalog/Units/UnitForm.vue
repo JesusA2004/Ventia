@@ -57,6 +57,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre completo de la unidad de medida, tal como se mostrará en productos y reportes."
             >
                 <Input
                     id="name"
@@ -71,6 +72,7 @@ function submit() {
                 for="symbol"
                 required
                 :error="form.errors.symbol"
+                tooltip="Abreviatura corta de la unidad, usada en tickets y pantallas donde el espacio es limitado."
             >
                 <Input
                     id="symbol"
@@ -84,6 +86,7 @@ function submit() {
                 for="type"
                 required
                 :error="form.errors.type"
+                tooltip="Categoría de medida a la que pertenece esta unidad (peso, volumen, longitud, pieza, etc.)."
             >
                 <Select v-model="form.type">
                     <SelectTrigger id="type" class="w-full">
@@ -155,6 +158,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Una unidad inactiva deja de estar disponible para asignarse a productos nuevos."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">

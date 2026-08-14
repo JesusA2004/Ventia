@@ -54,6 +54,7 @@ function submit() {
                 for="branch_id"
                 required
                 :error="form.errors.branch_id"
+                tooltip="Sucursal a la que pertenece este almacén."
             >
                 <Select v-model="form.branch_id">
                     <SelectTrigger id="branch_id" class="w-full">
@@ -97,6 +98,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre con el que identificarás este almacén dentro de Ventia."
             >
                 <Input id="name" v-model="form.name" required autofocus />
             </FormField>
@@ -118,6 +120,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Un almacén inactivo deja de estar disponible para recibir movimientos o ser seleccionado en operaciones."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">

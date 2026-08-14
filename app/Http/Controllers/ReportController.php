@@ -5,12 +5,19 @@ namespace App\Http\Controllers;
 use App\Exports\ReportWorkbookExport;
 use App\Http\Resources\BranchResource;
 use App\Models\Branch;
+use App\Models\CashRegister;
+use App\Models\Category;
+use App\Models\Company;
+use App\Models\Customer;
+use App\Models\PaymentMethod;
+use App\Models\Product;
 use App\Models\User;
 use App\Services\ActiveCompanyContext;
 use App\Services\Reports\CashReportService;
 use App\Services\Reports\CustomersReportService;
 use App\Services\Reports\InventoryReportService;
 use App\Services\Reports\ProductsReportService;
+use App\Services\Reports\ReportFilters;
 use App\Services\Reports\SalesReportService;
 use App\Services\Reports\SummaryReportService;
 use App\Support\ReportChartTitles;
@@ -72,7 +79,8 @@ class ReportController extends Controller
             : 'summary';
 
         [$from, $to] = $this->resolveDateRange($request);
-        $branchId = $request->integer('branch_id') ?: null;
+        $filters = ReportFilters::fromRequest($request);
+        $groupBy = $this->resolveGroupBy($request);
 
         return Inertia::render('Reports/Index', [
             'tab' => $tab,
@@ -80,11 +88,18 @@ class ReportController extends Controller
             'filters' => [
                 'date_from' => $from->toDateString(),
                 'date_to' => $to->toDateString(),
-                'branch_id' => $branchId,
+                'group_by' => $groupBy,
+                ...$filters->toArray(),
             ],
             'branchOptions' => BranchResource::collection(Branch::query()->orderBy('name')->get()),
+            'registerOptions' => CashRegister::query()->accessibleBy($user)->orderBy('name')->get(['id', 'name']),
+            'cashierOptions' => User::query()->orderBy('name')->get(['id', 'name']),
+            'categoryOptions' => Category::query()->where('status', 'active')->orderBy('name')->get(['id', 'name']),
+            'paymentMethodOptions' => PaymentMethod::query()->where('status', 'active')->orderBy('sort_order')->get(['id', 'name']),
+            'productOptions' => Product::query()->where('status', 'active')->orderBy('name')->limit(500)->get(['id', 'name']),
+            'customerOptions' => Customer::query()->orderBy('name')->limit(500)->get(['id', 'name']),
             'canViewProfit' => $user->can('products.view-costs'),
-            'data' => $this->buildTabData($tab, $user, $from->copy()->utc(), $to->copy()->utc(), $branchId),
+            'data' => $this->buildTabData($tab, $user, $from->copy()->utc(), $to->copy()->utc(), $filters, $groupBy),
         ]);
     }
 
@@ -128,21 +143,18 @@ class ReportController extends Controller
     {
         abort_unless($request->user()->can('reports.export'), 403);
 
-        ['tab' => $tab, 'data' => $data, 'from' => $from, 'to' => $to, 'branchId' => $branchId] = $this->resolveTabData($request);
+        ['tab' => $tab, 'data' => $data, 'from' => $from, 'to' => $to, 'branchId' => $branchId, 'filters' => $reportFilters] = $this->resolveTabData($request);
 
         $landscape = in_array($tab, ['sales', 'products', 'customers'], true);
         $company = $this->activeCompany->company();
-        $logoPath = null;
-
-        if ($company?->logo_path && Storage::disk('public')->exists($company->logo_path)) {
-            $logoPath = Storage::disk('public')->path($company->logo_path);
-        }
+        $logoPath = $this->resolveLogoPath($company);
 
         $pdf = Pdf::loadView('reports.pdf', [
             'reportTitle' => 'Reporte de '.(self::TAB_LABELS[$tab] ?? $tab),
             'company' => $company,
             'logoPath' => $logoPath,
             'branchName' => $branchId ? Branch::query()->withoutGlobalScopes()->find($branchId)?->name : null,
+            'filterLabels' => $this->resolveFilterLabels($reportFilters),
             'filters' => ['date_from' => $from->toDateString(), 'date_to' => $to->toDateString()],
             'generatedAt' => now()->format('d/m/Y H:i'),
             'generatedBy' => $request->user()->name,
@@ -203,24 +215,39 @@ class ReportController extends Controller
     {
         abort_unless($request->user()->can('reports.export'), 403);
 
-        ['tab' => $tab, 'data' => $data, 'from' => $from, 'to' => $to, 'branchId' => $branchId] = $this->resolveTabData($request);
+        ['tab' => $tab, 'data' => $data, 'from' => $from, 'to' => $to, 'branchId' => $branchId, 'filters' => $reportFilters] = $this->resolveTabData($request);
+
+        $company = $this->activeCompany->company();
 
         $export = new ReportWorkbookExport([
             'tab' => $tab,
             'reportTitle' => 'Reporte de '.(self::TAB_LABELS[$tab] ?? $tab),
-            'companyName' => $this->activeCompany->company()?->name ?? 'Ventia',
+            'companyName' => $company?->name ?? 'Ventia',
             'period' => $from->toDateString().' — '.$to->toDateString(),
             'branchName' => $branchId ? (Branch::query()->withoutGlobalScopes()->find($branchId)?->name ?? '—') : 'Todas las sucursales',
+            'filterLabels' => $this->resolveFilterLabels($reportFilters),
             'generatedAt' => now()->format('d/m/Y H:i'),
             'generatedBy' => $request->user()->name,
+            'primaryColor' => $company?->primary_color,
+            'secondaryColor' => $company?->secondary_color,
+            'logoPath' => $this->resolveLogoPath($company),
             'data' => $data,
         ]);
 
         return Excel::download($export, "reporte-{$tab}.xlsx");
     }
 
+    private function resolveLogoPath(?Company $company): ?string
+    {
+        if ($company?->logo_path && Storage::disk('public')->exists($company->logo_path)) {
+            return Storage::disk('public')->path($company->logo_path);
+        }
+
+        return null;
+    }
+
     /**
-     * @return array{tab: string, data: array{kpis: list<array{label: string, value: string}>, tables: list<array{title: string, columns: list<string>, rows: list<list<mixed>>}>}, from: CarbonInterface, to: CarbonInterface, branchId: ?int}
+     * @return array{tab: string, data: array{kpis: list<array{label: string, value: string}>, tables: list<array{title: string, columns: list<string>, rows: list<list<mixed>>}>}, from: CarbonInterface, to: CarbonInterface, branchId: ?int, filters: ReportFilters}
      */
     private function resolveTabData(Request $request): array
     {
@@ -231,26 +258,95 @@ class ReportController extends Controller
         [$localFrom, $localTo] = $this->resolveDateRange($request);
         $from = $localFrom->copy()->utc();
         $to = $localTo->copy()->utc();
-        $branchId = $request->integer('branch_id') ?: null;
+        $filters = ReportFilters::fromRequest($request);
+        $groupBy = $this->resolveGroupBy($request);
 
         // from/to returned here are the company-local range (for display,
         // e.g. the PDF header) — query methods above already received the
         // UTC-converted versions, since timestamps are stored in UTC.
-        return ['tab' => $tab, 'data' => $this->buildTabData($tab, $user, $from, $to, $branchId), 'from' => $localFrom, 'to' => $localTo, 'branchId' => $branchId];
+        return ['tab' => $tab, 'data' => $this->buildTabData($tab, $user, $from, $to, $filters, $groupBy), 'from' => $localFrom, 'to' => $localTo, 'branchId' => $filters->branchId, 'filters' => $filters];
     }
 
     /**
+     * Human-readable "Label: Name" strings for every active filter beyond
+     * the date range, shown identically on the PDF and (indirectly, via the
+     * same source) understood by the Excel/screen filter badges — so a
+     * reader never wonders what narrowed the numbers they're looking at.
+     *
+     * @return list<string>
+     */
+    private function resolveFilterLabels(ReportFilters $filters): array
+    {
+        $labels = [];
+
+        if ($filters->registerId) {
+            $name = CashRegister::query()->withoutGlobalScopes()->find($filters->registerId)?->name;
+            if ($name) {
+                $labels[] = "Caja: {$name}";
+            }
+        }
+
+        if ($filters->cashierId) {
+            $name = User::query()->find($filters->cashierId)?->name;
+            if ($name) {
+                $labels[] = "Cajero: {$name}";
+            }
+        }
+
+        if ($filters->categoryId) {
+            $name = Category::query()->withoutGlobalScopes()->find($filters->categoryId)?->name;
+            if ($name) {
+                $labels[] = "Categoría: {$name}";
+            }
+        }
+
+        if ($filters->paymentMethodId) {
+            $name = PaymentMethod::query()->withoutGlobalScopes()->find($filters->paymentMethodId)?->name;
+            if ($name) {
+                $labels[] = "Método de pago: {$name}";
+            }
+        }
+
+        if ($filters->productId) {
+            $name = Product::query()->withoutGlobalScopes()->find($filters->productId)?->name;
+            if ($name) {
+                $labels[] = "Producto: {$name}";
+            }
+        }
+
+        if ($filters->customerId) {
+            $name = Customer::query()->withoutGlobalScopes()->find($filters->customerId)?->name;
+            if ($name) {
+                $labels[] = "Cliente: {$name}";
+            }
+        }
+
+        return $labels;
+    }
+
+    /**
+     * @param  'day'|'week'|'month'  $groupBy
      * @return array{kpis: list<array{label: string, value: string}>, tables: list<array{title: string, columns: list<string>, rows: list<list<mixed>>}>}
      */
-    private function buildTabData(string $tab, User $user, CarbonInterface $from, CarbonInterface $to, ?int $branchId): array
+    private function buildTabData(string $tab, User $user, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters, string $groupBy = 'day'): array
     {
         return match ($tab) {
-            'sales' => $this->salesReport->build($user, $from, $to, $branchId),
-            'cash' => $this->cashReport->build($user, $from, $to, $branchId),
-            'inventory' => $this->inventoryReport->build($user, $branchId),
-            'products' => $this->productsReport->build($user, $from, $to, $branchId),
-            'customers' => $this->customersReport->build($user, $from, $to, $branchId),
-            default => $this->summaryReport->build($user, $from, $to, $branchId),
+            'sales' => $this->salesReport->build($user, $from, $to, $filters, $groupBy),
+            'cash' => $this->cashReport->build($user, $from, $to, $filters),
+            'inventory' => $this->inventoryReport->build($user, $filters),
+            'products' => $this->productsReport->build($user, $from, $to, $filters),
+            'customers' => $this->customersReport->build($user, $from, $to, $filters),
+            default => $this->summaryReport->build($user, $from, $to, $filters),
+        };
+    }
+
+    /** @return 'day'|'week'|'month' */
+    private function resolveGroupBy(Request $request): string
+    {
+        return match ($request->string('group_by')->toString()) {
+            'week' => 'week',
+            'month' => 'month',
+            default => 'day',
         };
     }
 

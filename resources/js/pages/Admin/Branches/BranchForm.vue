@@ -43,6 +43,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre con el que identificarás esta sucursal dentro de Ventia."
             >
                 <Input id="name" v-model="form.name" required autofocus />
             </FormField>
@@ -60,7 +61,12 @@ function submit() {
                     class="uppercase"
                 />
             </FormField>
-            <FormField label="Teléfono" for="phone" :error="form.errors.phone">
+            <FormField
+                label="Teléfono"
+                for="phone"
+                :error="form.errors.phone"
+                tooltip="Teléfono de contacto de esta sucursal."
+            >
                 <Input id="phone" v-model="form.phone" />
             </FormField>
             <FormField
@@ -68,6 +74,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Una sucursal inactiva deja de estar disponible para operar (POS, inventario y selección en formularios)."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">
@@ -84,6 +91,7 @@ function submit() {
                 for="address"
                 class="sm:col-span-2"
                 :error="form.errors.address"
+                tooltip="Domicilio físico de esta sucursal."
             >
                 <Input id="address" v-model="form.address" />
             </FormField>

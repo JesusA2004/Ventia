@@ -67,8 +67,24 @@ class CashSessionController extends Controller
 
         $user = Auth::user();
 
+        // A user can only have one open session at a time (see
+        // OpenCashSessionAction). If they already have one, showing the
+        // "open a register" form is a dead end — send them straight to a
+        // screen that lets them continue into the POS instead.
+        $activeSession = CashSession::query()
+            ->where('user_id', $user->id)
+            ->where('status', CashSessionStatus::Open)
+            ->with(['register:id,name,branch_id', 'register.branch:id,name'])
+            ->first();
+
+        if ($activeSession !== null) {
+            return Inertia::render('Cash/AlreadyOpen', [
+                'session' => CashSessionResource::make($activeSession),
+            ]);
+        }
+
         $registers = CashRegister::query()
-            ->with('branch:id,name')
+            ->with(['branch:id,name', 'openSession.user:id,name'])
             ->accessibleBy($user)
             ->where('status', 'active')
             ->orderBy('name')
@@ -80,6 +96,7 @@ class CashSessionController extends Controller
                 'name' => $r->name,
                 'branch_id' => $r->branch_id,
                 'branch_name' => $r->branch->name,
+                'occupied_by' => $r->openSession?->user?->name,
             ]),
         ]);
     }

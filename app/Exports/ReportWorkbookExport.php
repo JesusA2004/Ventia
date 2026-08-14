@@ -24,6 +24,7 @@ class ReportWorkbookExport implements Export, WithMultipleSheets
      * @param  array{
      *     tab: string, reportTitle: string, companyName: string, period: string,
      *     branchName: string, generatedAt: string, generatedBy: string,
+     *     primaryColor?: ?string, secondaryColor?: ?string, logoPath?: ?string, filterLabels?: list<string>,
      *     data: array{kpis: list<array{label: string, value: string}>, tables: list<array{title: string, columns: list<string>, rows: list<list<mixed>>}>},
      * }  $payload
      */
@@ -33,6 +34,7 @@ class ReportWorkbookExport implements Export, WithMultipleSheets
     {
         $p = $this->payload;
         $chartTable = ReportChartTitles::TABLE_BY_TAB[$p['tab']] ?? null;
+        $accentColor = $this->normalizeHexColor($p['primaryColor'] ?? null) ?? '2F5FDE';
 
         $sheets = [
             new ReportSummarySheet([
@@ -40,16 +42,34 @@ class ReportWorkbookExport implements Export, WithMultipleSheets
                 'companyName' => $p['companyName'],
                 'period' => $p['period'],
                 'branchName' => $p['branchName'],
+                'filterLabels' => $p['filterLabels'] ?? [],
                 'generatedAt' => $p['generatedAt'],
                 'generatedBy' => $p['generatedBy'],
                 'kpis' => $p['data']['kpis'],
+                'accentColor' => $accentColor,
+                'logoPath' => $p['logoPath'] ?? null,
             ]),
         ];
 
         foreach ($p['data']['tables'] as $index => $table) {
-            $sheets[] = new ReportTableSheet($table, $table['title'] === $chartTable, (string) ($index + 1));
+            $sheets[] = new ReportTableSheet($table, $table['title'] === $chartTable, (string) ($index + 1), $accentColor);
         }
 
         return $sheets;
+    }
+
+    /**
+     * Company brand colors are stored as free-form "#RRGGBB" (or without the
+     * hash); PhpSpreadsheet ARGB colors need a bare 6-hex-digit string.
+     */
+    private function normalizeHexColor(?string $color): ?string
+    {
+        if ($color === null) {
+            return null;
+        }
+
+        $hex = ltrim($color, '#');
+
+        return preg_match('/^[0-9A-Fa-f]{6}$/', $hex) === 1 ? strtoupper($hex) : null;
     }
 }

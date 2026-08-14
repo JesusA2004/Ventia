@@ -69,6 +69,7 @@ function submit() {
                 for="product_id"
                 required
                 :error="form.errors.product_id"
+                tooltip="Producto al que pertenece este lote. Solo se muestran productos con seguimiento por lote o caducidad."
             >
                 <ProductPicker prioritize-lots @select="onProductSelected" />
                 <p v-if="selectedProduct" class="text-sm text-muted-foreground">
@@ -84,6 +85,7 @@ function submit() {
                     for="lot_number"
                     required
                     :error="form.errors.lot_number"
+                    tooltip="Identificador del lote tal como aparece en el empaque o documento del proveedor."
                 >
                     <Input id="lot_number" v-model="form.lot_number" required />
                 </FormField>
@@ -91,6 +93,7 @@ function submit() {
                     label="Fecha de fabricación"
                     for="manufacture_date"
                     :error="form.errors.manufacture_date"
+                    tooltip="Fecha en que se fabricó este lote, si se conoce."
                 >
                     <Input
                         id="manufacture_date"
@@ -102,6 +105,7 @@ function submit() {
                     label="Fecha de caducidad"
                     for="expiration_date"
                     :error="form.errors.expiration_date"
+                    tooltip="Fecha límite de vida útil de este lote, usada para alertas de productos por caducar."
                 >
                     <Input
                         id="expiration_date"
@@ -113,6 +117,7 @@ function submit() {
                     label="Fecha de recepción"
                     for="received_at"
                     :error="form.errors.received_at"
+                    tooltip="Fecha en que este lote entró a tu inventario."
                 >
                     <Input
                         id="received_at"
@@ -140,6 +145,7 @@ function submit() {
                     label="Almacén (inventario inicial)"
                     for="warehouse_id"
                     :error="form.errors.warehouse_id"
+                    tooltip="Almacén donde se registrará la cantidad inicial de este lote, si capturas una."
                 >
                     <Select v-model="form.warehouse_id">
                         <SelectTrigger id="warehouse_id" class="w-full">
@@ -160,6 +166,7 @@ function submit() {
                     label="Cantidad inicial"
                     for="initial_quantity"
                     :error="form.errors.initial_quantity"
+                    tooltip="Existencias con las que entra este lote al almacén seleccionado. Déjalo vacío si solo quieres registrar el lote sin inventario todavía."
                 >
                     <Input
                         id="initial_quantity"

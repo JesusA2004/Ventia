@@ -44,6 +44,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre con el que identificarás esta categoría en el catálogo y el POS."
             >
                 <Input id="name" v-model="form.name" required autofocus />
             </FormField>
@@ -51,6 +52,7 @@ function submit() {
                 label="Categoría padre"
                 for="parent_id"
                 :error="form.errors.parent_id"
+                tooltip="Categoría superior a la que pertenece esta, para organizar el catálogo en niveles (por ejemplo, 'Bebidas' dentro de 'Abarrotes')."
             >
                 <Select v-model="form.parent_id">
                     <SelectTrigger id="parent_id" class="w-full">
@@ -76,6 +78,7 @@ function submit() {
                 label="Orden"
                 for="sort_order"
                 :error="form.errors.sort_order"
+                tooltip="Posición de esta categoría al mostrarla en listas y en el POS. Un número menor aparece primero."
             >
                 <Input
                     id="sort_order"
@@ -89,6 +92,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Una categoría inactiva deja de estar disponible para asignarse a productos nuevos."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">
@@ -105,6 +109,7 @@ function submit() {
                 for="description"
                 class="sm:col-span-2"
                 :error="form.errors.description"
+                tooltip="Texto opcional que describe qué tipo de productos incluye esta categoría."
             >
                 <Textarea
                     id="description"

@@ -47,6 +47,7 @@ function submit() {
                 for="branch_id"
                 required
                 :error="form.errors.branch_id"
+                tooltip="Sucursal donde está físicamente esta caja."
             >
                 <Select v-model="form.branch_id">
                     <SelectTrigger id="branch_id" class="w-full">
@@ -68,6 +69,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre con el que los cajeros identificarán esta caja al abrir turno."
             >
                 <Input id="name" v-model="form.name" required autofocus />
             </FormField>
@@ -88,6 +90,7 @@ function submit() {
                 label="Impresora"
                 for="printer_name"
                 :error="form.errors.printer_name"
+                tooltip="Nombre de la impresora de tickets configurada en el equipo que usará esta caja."
             >
                 <Input
                     id="printer_name"
@@ -99,6 +102,7 @@ function submit() {
                 label="Usuario asignado"
                 for="assigned_user_id"
                 :error="form.errors.assigned_user_id"
+                tooltip="Usuario responsable habitual de esta caja. Es solo referencia: cualquier usuario con permiso puede abrir turno en ella."
             >
                 <Select v-model="form.assigned_user_id">
                     <SelectTrigger id="assigned_user_id" class="w-full">
@@ -120,6 +124,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Una caja inactiva no aparece como disponible para abrir turno en el punto de venta."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">
@@ -135,6 +140,7 @@ function submit() {
                 label="Cajón de dinero"
                 for="has_cash_drawer"
                 :error="form.errors.has_cash_drawer"
+                tooltip="Indica si esta caja tiene un cajón de dinero físico conectado, para activar su apertura automática al cobrar."
             >
                 <div class="flex h-9 items-center">
                     <Switch

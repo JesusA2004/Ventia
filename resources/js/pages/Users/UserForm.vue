@@ -54,6 +54,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre completo del usuario, con el que se le identificará en Ventia (auditoría, ventas, sesiones de caja)."
             >
                 <Input id="name" v-model="form.name" required autofocus />
             </FormField>
@@ -62,6 +63,7 @@ function submit() {
                 for="email"
                 required
                 :error="form.errors.email"
+                tooltip="Correo con el que este usuario iniciará sesión en Ventia. Debe ser único."
             >
                 <Input id="email" v-model="form.email" type="email" required />
             </FormField>
@@ -72,6 +74,7 @@ function submit() {
                 for="password"
                 :required="!targetUser"
                 :error="form.errors.password"
+                tooltip="Contraseña de acceso del usuario. Déjala vacía al editar si no quieres cambiarla."
             >
                 <Input
                     id="password"
@@ -85,6 +88,7 @@ function submit() {
                 for="role"
                 required
                 :error="form.errors.role"
+                tooltip="Define qué módulos y acciones puede usar este usuario dentro de Ventia."
             >
                 <Select v-model="form.role">
                     <SelectTrigger id="role" class="w-full">
@@ -105,6 +109,7 @@ function submit() {
                 label="Activo"
                 for="is_active"
                 :error="form.errors.is_active"
+                tooltip="Un usuario inactivo no puede iniciar sesión en Ventia."
             >
                 <div class="flex h-9 items-center">
                     <Switch id="is_active" v-model="form.is_active" />
@@ -115,6 +120,7 @@ function submit() {
         <FormField
             label="Sucursales con acceso"
             :error="form.errors.branch_ids"
+            tooltip="Sucursales en las que este usuario puede operar. Si su rol ya tiene acceso a todas, esta selección no lo restringe más."
         >
             <p class="text-xs text-muted-foreground">
                 Si no seleccionas ninguna y el rol no tiene acceso a todas las

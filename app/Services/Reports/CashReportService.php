@@ -20,11 +20,13 @@ class CashReportService
     /**
      * @return array{kpis: list<array{label: string, value: string}>, tables: list<array{title: string, columns: list<string>, rows: list<list<mixed>>}>}
      */
-    public function build(User $user, CarbonInterface $from, CarbonInterface $to, ?int $branchId): array
+    public function build(User $user, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
         $sessionsWithDifferences = CashSession::query()->accessibleBy($user)
             ->with(['register:id,name', 'user:id,name'])
-            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters->registerId, fn ($q, $id) => $q->where('register_id', $id))
+            ->when($filters->cashierId, fn ($q, $id) => $q->where('user_id', $id))
             ->whereBetween('closed_at', [$from, $to])
             ->whereNotNull('difference')
             ->where('difference', '!=', 0)
@@ -32,7 +34,9 @@ class CashReportService
             ->get();
 
         $movementsByType = CashMovement::query()->accessibleBy($user)
-            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters->registerId, fn ($q, $id) => $q->where('register_id', $id))
+            ->when($filters->cashierId, fn ($q, $id) => $q->where('user_id', $id))
             ->whereBetween('created_at', [$from, $to])
             ->selectRaw('type, COUNT(*) as movements, SUM(amount) as total')
             ->groupBy('type')->orderBy('type')->get();

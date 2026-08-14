@@ -183,8 +183,43 @@ const hasAttributes = computed(() => props.attributeOptions.length > 0);
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Combinación</TableHead>
-                        <TableHead>SKU</TableHead>
+                        <TableHead>
+                            <span class="inline-flex items-center gap-1.5">
+                                Combinación
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        type="button"
+                                        class="text-muted-foreground hover:text-foreground"
+                                        aria-label="Ayuda: Combinación"
+                                    >
+                                        <CircleHelpIcon class="size-3.5" />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        >Valores de atributo que forman esta
+                                        variante específica (por ejemplo,
+                                        Talla: Chica / Color: Rojo).</TooltipContent
+                                    >
+                                </Tooltip>
+                            </span>
+                        </TableHead>
+                        <TableHead>
+                            <span class="inline-flex items-center gap-1.5">
+                                SKU
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        type="button"
+                                        class="text-muted-foreground hover:text-foreground"
+                                        aria-label="Ayuda: SKU"
+                                    >
+                                        <CircleHelpIcon class="size-3.5" />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        >Código único de esta variante,
+                                        generado automáticamente y editable.</TooltipContent
+                                    >
+                                </Tooltip>
+                            </span>
+                        </TableHead>
                         <TableHead>
                             <span class="inline-flex items-center gap-1.5">
                                 Costo
@@ -225,7 +260,24 @@ const hasAttributes = computed(() => props.attributeOptions.length > 0);
                                 </Tooltip>
                             </span>
                         </TableHead>
-                        <TableHead>Estado</TableHead>
+                        <TableHead>
+                            <span class="inline-flex items-center gap-1.5">
+                                Estado
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        type="button"
+                                        class="text-muted-foreground hover:text-foreground"
+                                        aria-label="Ayuda: Estado"
+                                    >
+                                        <CircleHelpIcon class="size-3.5" />
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        >Una variante inactiva deja de estar
+                                        disponible para venderse.</TooltipContent
+                                    >
+                                </Tooltip>
+                            </span>
+                        </TableHead>
                         <TableHead class="text-right">Quitar</TableHead>
                     </TableRow>
                 </TableHeader>

@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { FileSpreadsheetIcon, FileTextIcon, XIcon } from '@lucide/vue';
+import {
+    BoxesIcon,
+    FileSpreadsheetIcon,
+    FileTextIcon,
+    LayoutDashboardIcon,
+    Loader2Icon,
+    ShoppingCartIcon,
+    TagIcon,
+    UsersIcon,
+    WalletIcon,
+    XIcon,
+} from '@lucide/vue';
 import {
     ArcElement,
     BarElement,
@@ -13,7 +24,7 @@ import {
     PointElement,
     Tooltip as ChartTooltip,
 } from 'chart.js';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Bar, Doughnut, Line } from 'vue-chartjs';
 import { Badge } from '@/components/ui/badge';
 import ChartCard from '@/components/dashboard/ChartCard.vue';
@@ -21,6 +32,13 @@ import DateRangePicker from '@/components/filters/DateRangePicker.vue';
 import SearchableSelect from '@/components/forms/SearchableSelect.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -36,19 +54,6 @@ import {
     exportXlsx as exportReportXlsx,
     index as reportsIndex,
 } from '@/routes/reports';
-import type { Branch } from '@/types';
-
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    LineElement,
-    PointElement,
-    ArcElement,
-    ChartTooltip,
-    Legend,
-    Filler,
-);
 
 type ReportTab =
     | 'summary'
@@ -69,11 +74,42 @@ type ReportData = {
     tables: ReportTable[];
 };
 
+type NamedOption = { id: number; name: string };
+
+type FilterKey =
+    | 'register_id'
+    | 'cashier_id'
+    | 'category_id'
+    | 'payment_method_id'
+    | 'product_id'
+    | 'customer_id';
+
+type GroupBy = 'day' | 'week' | 'month';
+
+type ReportFilters = {
+    date_from: string;
+    date_to: string;
+    group_by: GroupBy;
+    branch_id: number | null;
+    register_id: number | null;
+    cashier_id: number | null;
+    category_id: number | null;
+    payment_method_id: number | null;
+    product_id: number | null;
+    customer_id: number | null;
+};
+
 const props = defineProps<{
     tab: ReportTab;
     tabs: { value: ReportTab; label: string }[];
-    filters: { date_from: string; date_to: string; branch_id: number | null };
-    branchOptions: Branch[];
+    filters: ReportFilters;
+    branchOptions: NamedOption[];
+    registerOptions: NamedOption[];
+    cashierOptions: NamedOption[];
+    categoryOptions: NamedOption[];
+    paymentMethodOptions: NamedOption[];
+    productOptions: NamedOption[];
+    customerOptions: NamedOption[];
     canViewProfit: boolean;
     data: ReportData;
 }>();
@@ -90,6 +126,91 @@ const TAB_DESCRIPTIONS: Record<ReportTab, string> = {
     customers:
         'Clientes nuevos, clientes con mayor compra y uso de crédito en el período.',
 };
+
+const TAB_ICONS: Record<ReportTab, typeof LayoutDashboardIcon> = {
+    summary: LayoutDashboardIcon,
+    sales: ShoppingCartIcon,
+    inventory: BoxesIcon,
+    cash: WalletIcon,
+    products: TagIcon,
+    customers: UsersIcon,
+};
+
+/** Inventario is a point-in-time balance, not a period — no date range there. See InventoryReportService. */
+const TABS_WITHOUT_DATE_RANGE: ReportTab[] = ['inventory'];
+
+/** Which of the shared entity filters make sense on each tab — never show a control the backend ignores. */
+const TAB_FILTERS: Record<ReportTab, FilterKey[]> = {
+    summary: [],
+    sales: [
+        'register_id',
+        'cashier_id',
+        'category_id',
+        'product_id',
+        'payment_method_id',
+    ],
+    inventory: ['category_id', 'product_id'],
+    cash: ['register_id', 'cashier_id'],
+    products: ['category_id', 'product_id'],
+    customers: ['customer_id'],
+};
+
+type FilterMeta = {
+    label: string;
+    allLabel: string;
+    options: () => NamedOption[];
+};
+
+const FILTER_META: Record<FilterKey, FilterMeta> = {
+    register_id: {
+        label: 'Caja',
+        allLabel: 'Todas las cajas',
+        options: () => props.registerOptions,
+    },
+    cashier_id: {
+        label: 'Cajero',
+        allLabel: 'Todos los cajeros',
+        options: () => props.cashierOptions,
+    },
+    category_id: {
+        label: 'Categoría',
+        allLabel: 'Todas las categorías',
+        options: () => props.categoryOptions,
+    },
+    payment_method_id: {
+        label: 'Método de pago',
+        allLabel: 'Todos los métodos',
+        options: () => props.paymentMethodOptions,
+    },
+    product_id: {
+        label: 'Producto',
+        allLabel: 'Todos los productos',
+        options: () => props.productOptions,
+    },
+    customer_id: {
+        label: 'Cliente',
+        allLabel: 'Todos los clientes',
+        options: () => props.customerOptions,
+    },
+};
+
+const visibleFilterKeys = computed(() => TAB_FILTERS[props.tab]);
+const showDateRange = computed(
+    () => !TABS_WITHOUT_DATE_RANGE.includes(props.tab),
+);
+const showGrouping = computed(() => props.tab === 'sales');
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    LineElement,
+    PointElement,
+    ArcElement,
+    ChartTooltip,
+    Legend,
+    Filler,
+);
 
 const chartOptions = {
     responsive: true,
@@ -168,28 +289,54 @@ type ChartDef = {
     kind: 'line' | 'bar' | 'doughnut';
     tableTitle: string;
     valueIndex?: number;
+    emptyMessage: string;
 };
 
 const CHART_DEFS: Record<ReportTab, ChartDef[]> = {
-    summary: [],
+    summary: [
+        {
+            key: 'summary-trend',
+            title: 'Tendencia de ventas',
+            kind: 'line',
+            tableTitle: 'Ventas por período',
+            emptyMessage: 'No hay ventas en el período seleccionado.',
+        },
+        {
+            key: 'summary-branch',
+            title: 'Ventas por sucursal',
+            kind: 'bar',
+            tableTitle: 'Ventas por sucursal',
+            emptyMessage: 'No hay ventas por sucursal en el período seleccionado.',
+        },
+        {
+            key: 'summary-payment',
+            title: 'Métodos de pago',
+            kind: 'doughnut',
+            tableTitle: 'Ventas por método de pago',
+            emptyMessage: 'No hay cobros registrados en el período seleccionado.',
+        },
+    ],
     sales: [
         {
             key: 'sales-trend',
             title: 'Tendencia de ventas',
             kind: 'line',
             tableTitle: 'Ventas por período',
+            emptyMessage: 'No hay ventas en el período seleccionado.',
         },
         {
             key: 'sales-branch',
             title: 'Ventas por sucursal',
             kind: 'bar',
             tableTitle: 'Ventas por sucursal',
+            emptyMessage: 'No hay ventas por sucursal en el período seleccionado.',
         },
         {
             key: 'sales-payment',
             title: 'Métodos de pago',
             kind: 'doughnut',
             tableTitle: 'Ventas por método de pago',
+            emptyMessage: 'No hay cobros registrados en el período seleccionado.',
         },
         {
             key: 'sales-products',
@@ -197,6 +344,7 @@ const CHART_DEFS: Record<ReportTab, ChartDef[]> = {
             kind: 'bar',
             tableTitle: 'Productos más vendidos',
             valueIndex: 1,
+            emptyMessage: 'No hay productos vendidos en el período seleccionado.',
         },
     ],
     inventory: [
@@ -205,6 +353,7 @@ const CHART_DEFS: Record<ReportTab, ChartDef[]> = {
             title: 'Existencias por almacén',
             kind: 'bar',
             tableTitle: 'Existencias valorizadas por almacén',
+            emptyMessage: 'No hay existencias registradas para estos filtros.',
         },
     ],
     cash: [
@@ -213,6 +362,7 @@ const CHART_DEFS: Record<ReportTab, ChartDef[]> = {
             title: 'Movimientos de caja por tipo',
             kind: 'bar',
             tableTitle: 'Movimientos de caja por tipo',
+            emptyMessage: 'No hay movimientos de caja en el período seleccionado.',
         },
     ],
     products: [
@@ -222,6 +372,7 @@ const CHART_DEFS: Record<ReportTab, ChartDef[]> = {
             kind: 'bar',
             tableTitle: 'Productos más vendidos',
             valueIndex: 2,
+            emptyMessage: 'No hay productos vendidos en el período seleccionado.',
         },
         {
             key: 'products-category',
@@ -229,6 +380,7 @@ const CHART_DEFS: Record<ReportTab, ChartDef[]> = {
             kind: 'doughnut',
             tableTitle: 'Ventas por categoría',
             valueIndex: 2,
+            emptyMessage: 'No hay ventas por categoría en el período seleccionado.',
         },
     ],
     customers: [
@@ -238,6 +390,7 @@ const CHART_DEFS: Record<ReportTab, ChartDef[]> = {
             kind: 'bar',
             tableTitle: 'Clientes con mayor compra',
             valueIndex: 2,
+            emptyMessage: 'No hay compras de clientes en el período seleccionado.',
         },
     ],
 };
@@ -249,11 +402,39 @@ const charts = computed(() =>
     })),
 );
 
-const selectedBranchName = computed(
-    () =>
-        props.branchOptions.find((b) => b.id === props.filters.branch_id)
-            ?.name,
-);
+function optionName(options: NamedOption[], id: number | null) {
+    return options.find((o) => o.id === id)?.name;
+}
+
+const activeFilterBadges = computed(() => {
+    const badges: { key: string; label: string; onClear: () => void }[] = [];
+
+    if (props.filters.branch_id) {
+        const name = optionName(props.branchOptions, props.filters.branch_id);
+        if (name) {
+            badges.push({
+                key: 'branch_id',
+                label: `Sucursal: ${name}`,
+                onClear: () => apply({ branch_id: undefined }),
+            });
+        }
+    }
+
+    for (const key of visibleFilterKeys.value) {
+        const value = props.filters[key];
+        if (!value) continue;
+        const meta = FILTER_META[key];
+        const name = optionName(meta.options(), value);
+        if (!name) continue;
+        badges.push({
+            key,
+            label: `${meta.label}: ${name}`,
+            onClear: () => apply({ [key]: undefined }),
+        });
+    }
+
+    return badges;
+});
 
 defineOptions({
     layout: {
@@ -261,17 +442,35 @@ defineOptions({
     },
 });
 
+const updating = ref(false);
+
 function apply(partial: Record<string, string | number | undefined>) {
     router.get(
         reportsIndex().url,
         { tab: props.tab, ...props.filters, ...partial },
-        { preserveState: true, preserveScroll: true, replace: true },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onStart: () => (updating.value = true),
+            onFinish: () => (updating.value = false),
+        },
     );
 }
 
 function clearFilters() {
-    apply({ branch_id: undefined, date_from: undefined, date_to: undefined });
+    apply({
+        branch_id: undefined,
+        register_id: undefined,
+        cashier_id: undefined,
+        category_id: undefined,
+        payment_method_id: undefined,
+        product_id: undefined,
+        customer_id: undefined,
+    });
 }
+
+const hasActiveFilters = computed(() => activeFilterBadges.value.length > 0);
 </script>
 
 <template>
@@ -280,7 +479,7 @@ function clearFilters() {
     <div class="flex flex-col gap-6">
         <PageHeader
             title="Reportes"
-            description="Analiza ventas, inventario, caja y comportamiento operativo de tu negocio."
+            description="Centro analítico: qué ocurrió, cuándo, dónde y con qué producto o cajero, a lo largo del período seleccionado."
         >
             <template #actions>
                 <Button variant="outline" as-child>
@@ -322,17 +521,29 @@ function clearFilters() {
                         v-for="t in tabs"
                         :key="t.value"
                         :value="t.value"
+                        class="gap-1.5"
                     >
+                        <component :is="TAB_ICONS[t.value]" class="size-4" />
                         {{ t.label }}
                     </TabsTrigger>
                 </TabsList>
             </Tabs>
-            <p class="text-sm text-muted-foreground">
-                {{ TAB_DESCRIPTIONS[tab] }}
-            </p>
+            <div class="flex items-center gap-2">
+                <p class="text-sm text-muted-foreground">
+                    {{ TAB_DESCRIPTIONS[tab] }}
+                </p>
+                <span
+                    v-if="updating"
+                    class="flex items-center gap-1 text-xs text-muted-foreground"
+                >
+                    <Loader2Icon class="size-3 animate-spin" />
+                    Actualizando…
+                </span>
+            </div>
 
             <div class="flex flex-wrap items-end gap-3 border-t pt-4">
                 <DateRangePicker
+                    v-if="showDateRange"
                     :model-value="{
                         preset: 'custom',
                         date_from: filters.date_from,
@@ -343,8 +554,25 @@ function clearFilters() {
                             apply({ date_from: v.date_from, date_to: v.date_to })
                     "
                 />
+                <div v-if="showGrouping" class="flex flex-col gap-1">
+                    <Select
+                        :model-value="filters.group_by"
+                        @update:model-value="
+                            (v) => apply({ group_by: String(v) })
+                        "
+                    >
+                        <SelectTrigger class="w-40">
+                            <SelectValue placeholder="Agrupación" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="day">Diaria</SelectItem>
+                            <SelectItem value="week">Semanal</SelectItem>
+                            <SelectItem value="month">Mensual</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
                 <SearchableSelect
-                    class="w-56"
+                    class="w-48"
                     :model-value="
                         filters.branch_id ? String(filters.branch_id) : null
                     "
@@ -354,14 +582,30 @@ function clearFilters() {
                             label: b.name,
                         }))
                     "
-                    placeholder="Todas las sucursales"
+                    placeholder="Sucursal"
                     all-label="Todas las sucursales"
                     @update:model-value="
                         (v) => apply({ branch_id: v ?? undefined })
                     "
                 />
+                <SearchableSelect
+                    v-for="key in visibleFilterKeys"
+                    :key="key"
+                    class="w-48"
+                    :model-value="filters[key] ? String(filters[key]) : null"
+                    :options="
+                        FILTER_META[key]
+                            .options()
+                            .map((o) => ({ value: String(o.id), label: o.name }))
+                    "
+                    :placeholder="FILTER_META[key].label"
+                    :all-label="FILTER_META[key].allLabel"
+                    @update:model-value="
+                        (v) => apply({ [key]: v ?? undefined })
+                    "
+                />
                 <Button
-                    v-if="filters.branch_id"
+                    v-if="hasActiveFilters"
                     variant="ghost"
                     size="sm"
                     @click="clearFilters"
@@ -370,17 +614,19 @@ function clearFilters() {
                 </Button>
             </div>
 
-            <div
-                v-if="filters.branch_id"
-                class="flex flex-wrap items-center gap-2"
-            >
+            <div v-if="hasActiveFilters" class="flex flex-wrap items-center gap-2">
                 <span class="text-xs text-muted-foreground">Filtros activos:</span>
-                <Badge variant="secondary" class="gap-1">
-                    Sucursal: {{ selectedBranchName }}
+                <Badge
+                    v-for="badge in activeFilterBadges"
+                    :key="badge.key"
+                    variant="secondary"
+                    class="gap-1"
+                >
+                    {{ badge.label }}
                     <button
                         type="button"
-                        aria-label="Quitar filtro de sucursal"
-                        @click="apply({ branch_id: undefined })"
+                        :aria-label="`Quitar filtro: ${badge.label}`"
+                        @click="badge.onClear"
                     >
                         <XIcon class="size-3" />
                     </button>
@@ -416,6 +662,11 @@ function clearFilters() {
                 :empty="!chart.data"
                 :height="chart.kind === 'line' ? 'h-72' : 'h-64'"
             >
+                <template #empty>
+                    <p class="text-sm text-muted-foreground">
+                        {{ chart.emptyMessage }}
+                    </p>
+                </template>
                 <Line
                     v-if="chart.data && chart.kind === 'line'"
                     :data="chart.data"

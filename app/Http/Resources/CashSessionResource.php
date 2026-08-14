@@ -19,6 +19,7 @@ class CashSessionResource extends JsonResource
             'register_id' => $this->register_id,
             'register_name' => $this->whenLoaded('register', fn () => $this->register->name),
             'branch_id' => $this->branch_id,
+            'branch_name' => $this->whenLoaded('register', fn () => $this->register->relationLoaded('branch') ? $this->register->branch?->name : null),
             'user_id' => $this->user_id,
             'user_name' => $this->whenLoaded('user', fn () => $this->user->name),
             'status' => $this->status->value,

@@ -166,6 +166,7 @@ function submit() {
                 label="Observaciones"
                 for="closing_notes"
                 :error="form.errors.closing_notes"
+                tooltip="Notas opcionales sobre este cierre de caja, por ejemplo la causa de alguna diferencia."
             >
                 <Textarea
                     id="closing_notes"

@@ -61,6 +61,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Característica que distingue las variantes de un producto (por ejemplo, Talla, Color, Sabor)."
             >
                 <Input
                     id="name"
@@ -75,6 +76,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Un atributo inactivo deja de estar disponible para generar nuevas variantes de producto."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">

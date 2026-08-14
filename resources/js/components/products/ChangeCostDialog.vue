@@ -63,6 +63,7 @@ function submit() {
                     v-model="form.cost"
                     label="Nuevo costo"
                     required
+                    tooltip="Nuevo costo unitario de este producto. Reemplaza al actual y queda registrado con fecha, usuario y motivo."
                     :error="form.errors.cost"
                 />
                 <FormField
@@ -70,6 +71,7 @@ function submit() {
                     for="reason"
                     required
                     :error="form.errors.reason"
+                    tooltip="Explicación breve de por qué cambia el costo, visible en el historial de precios."
                 >
                     <Input
                         id="reason"

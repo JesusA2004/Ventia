@@ -83,6 +83,12 @@
             <td class="label">Generado por</td>
             <td>{{ $generatedBy }}</td>
         </tr>
+        @if (!empty($filterLabels))
+            <tr>
+                <td class="label">Filtros</td>
+                <td colspan="3">{{ implode(' · ', $filterLabels) }}</td>
+            </tr>
+        @endif
     </table>
 
     @if (count($data['kpis'] ?? []) > 0)

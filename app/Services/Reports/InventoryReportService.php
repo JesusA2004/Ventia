@@ -20,30 +20,36 @@ class InventoryReportService
     /**
      * @return array{kpis: list<array{label: string, value: string}>, tables: list<array{title: string, columns: list<string>, rows: list<list<mixed>>}>}
      */
-    public function build(User $user, ?int $branchId): array
+    public function build(User $user, ReportFilters $filters): array
     {
         $canViewCosts = $user->can('inventory.view-costs');
 
         $valuedByWarehouse = InventoryBalance::query()->accessibleBy($user)
             ->join('warehouses', 'warehouses.id', '=', 'inventory_balances.warehouse_id')
-            ->when($branchId, fn ($q, $id) => $q->where('inventory_balances.branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('inventory_balances.branch_id', $id))
+            ->when($filters->productId, fn ($q, $id) => $q->where('inventory_balances.product_id', $id))
+            ->when($filters->categoryId, fn ($q, $id) => $q->whereHas('product', fn ($p) => $p->where('category_id', $id)))
             ->selectRaw('warehouses.name as label, SUM(inventory_balances.quantity) as quantity, SUM(inventory_balances.quantity * inventory_balances.average_cost) as value')
             ->groupBy('warehouses.name')->orderBy('warehouses.name')->get();
 
         $movementsByType = InventoryMovement::query()->accessibleBy($user)
-            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters->productId, fn ($q, $id) => $q->where('product_id', $id))
+            ->when($filters->categoryId, fn ($q, $id) => $q->whereHas('product', fn ($p) => $p->where('category_id', $id)))
             ->selectRaw('movement_type, COUNT(*) as movements, SUM(quantity) as quantity')
             ->groupBy('movement_type')->orderBy('movement_type')->get();
 
         $outOfStock = \App\Models\Product::query()
             ->where('status', 'active')
             ->where('product_type', '!=', 'service')
-            ->whereNotExists(function ($query) use ($branchId) {
+            ->when($filters->productId, fn ($q, $id) => $q->where('id', $id))
+            ->when($filters->categoryId, fn ($q, $id) => $q->where('category_id', $id))
+            ->whereNotExists(function ($query) use ($filters) {
                 $query->selectRaw('1')
                     ->from('inventory_balances')
                     ->whereColumn('inventory_balances.product_id', 'products.id')
                     ->where('inventory_balances.quantity', '>', 0)
-                    ->when($branchId, fn ($q, $id) => $q->where('inventory_balances.branch_id', $id));
+                    ->when($filters->branchId, fn ($q, $id) => $q->where('inventory_balances.branch_id', $id));
             })
             ->orderBy('name')
             ->limit(25)
@@ -52,7 +58,9 @@ class InventoryReportService
         $lowStock = InventoryBalance::query()->accessibleBy($user)
             ->join('products', 'products.id', '=', 'inventory_balances.product_id')
             ->join('warehouses', 'warehouses.id', '=', 'inventory_balances.warehouse_id')
-            ->when($branchId, fn ($q, $id) => $q->where('inventory_balances.branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('inventory_balances.branch_id', $id))
+            ->when($filters->productId, fn ($q, $id) => $q->where('inventory_balances.product_id', $id))
+            ->when($filters->categoryId, fn ($q, $id) => $q->where('products.category_id', $id))
             ->whereColumn('inventory_balances.quantity', '<=', 'products.minimum_stock')
             ->where('products.minimum_stock', '>', 0)
             ->selectRaw('products.name as product_name, warehouses.name as warehouse_name, inventory_balances.quantity as quantity, products.minimum_stock as minimum_stock')

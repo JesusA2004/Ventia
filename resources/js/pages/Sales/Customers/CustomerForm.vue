@@ -74,6 +74,7 @@ function submit() {
                 for="customer_type"
                 required
                 :error="form.errors.customer_type"
+                tooltip="Persona física o moral, o 'Público general' para ventas sin cliente identificado. Afecta el formato válido del RFC."
             >
                 <Select v-model="form.customer_type">
                     <SelectTrigger id="customer_type" class="w-full">
@@ -95,6 +96,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre con el que identificarás a este cliente al buscarlo en el punto de venta."
             >
                 <Input id="name" v-model="form.name" required autofocus />
             </FormField>
@@ -102,6 +104,7 @@ function submit() {
                 label="Razón social"
                 for="legal_name"
                 :error="form.errors.legal_name"
+                tooltip="Nombre legal completo del cliente, usado en facturación."
             >
                 <Input id="legal_name" v-model="form.legal_name" />
             </FormField>
@@ -123,6 +126,7 @@ function submit() {
                 label="Teléfono"
                 for="phone"
                 :error="form.errors.phone ?? form.errors.phone_country_code"
+                tooltip="Teléfono de contacto del cliente, con su código de país."
             >
                 <div class="flex gap-2">
                     <Select v-model="form.phone_country_code">
@@ -148,7 +152,12 @@ function submit() {
                     />
                 </div>
             </FormField>
-            <FormField label="Correo" for="email" :error="form.errors.email">
+            <FormField
+                label="Correo"
+                for="email"
+                :error="form.errors.email"
+                tooltip="Correo del cliente, usado como referencia de contacto y, si aplica, para enviarle comprobantes."
+            >
                 <Input id="email" v-model="form.email" type="email" />
             </FormField>
             <FormField
@@ -196,6 +205,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Un cliente inactivo deja de estar disponible para seleccionarse en ventas nuevas."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">
@@ -212,6 +222,7 @@ function submit() {
                 for="address"
                 class="sm:col-span-2"
                 :error="form.errors.address"
+                tooltip="Domicilio del cliente, útil para entregas o documentos fiscales."
             >
                 <Textarea id="address" v-model="form.address" rows="2" />
             </FormField>
@@ -220,6 +231,7 @@ function submit() {
                 for="notes"
                 class="sm:col-span-2"
                 :error="form.errors.notes"
+                tooltip="Notas internas sobre este cliente, visibles solo para tu equipo."
             >
                 <Textarea id="notes" v-model="form.notes" rows="2" />
             </FormField>

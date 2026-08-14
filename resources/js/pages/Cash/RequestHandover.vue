@@ -65,6 +65,7 @@ function submit() {
                 label="Observaciones"
                 for="cashier_notes"
                 :error="form.errors.cashier_notes"
+                tooltip="Notas opcionales para el supervisor sobre tu turno, útiles si hubo alguna incidencia."
             >
                 <Textarea
                     id="cashier_notes"

@@ -15,6 +15,7 @@ use PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues;
 use PhpOffice\PhpSpreadsheet\Chart\PlotArea;
 use PhpOffice\PhpSpreadsheet\Chart\Title as ChartTitle;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 /**
  * "Resumen" sheet: a cover page for the workbook — company/report identity,
@@ -32,8 +33,10 @@ class ReportSummarySheet implements FromArray, WithCharts, WithColumnWidths, Wit
 
     private int $kpiLastRow = 0;
 
+    private int $metaLastRow = 0;
+
     /**
-     * @param  array{reportTitle: string, companyName: string, period: string, branchName: string, generatedAt: string, generatedBy: string, kpis: list<array{label: string, value: string}>}  $payload
+     * @param  array{reportTitle: string, companyName: string, period: string, branchName: string, generatedAt: string, generatedBy: string, filterLabels: list<string>, kpis: list<array{label: string, value: string}>, accentColor: string, logoPath: ?string}  $payload
      */
     public function __construct(private readonly array $payload) {}
 
@@ -56,9 +59,15 @@ class ReportSummarySheet implements FromArray, WithCharts, WithColumnWidths, Wit
             [''], // a bare [] row is silently dropped by Maatwebsite's FromArray pipeline (ArrayHelper::ensureMultipleRows treats it as "zero rows"), so every spacer needs a non-empty cell.
             ['Período', $p['period']],
             ['Sucursal', $p['branchName']],
-            ['Generado', $p['generatedAt'].' por '.$p['generatedBy']],
-            [''],
         ];
+
+        if (count($p['filterLabels']) > 0) {
+            $rows[] = ['Filtros', implode(' · ', $p['filterLabels'])];
+        }
+
+        $rows[] = ['Generado', $p['generatedAt'].' por '.$p['generatedBy']];
+        $this->metaLastRow = count($rows);
+        $rows[] = [''];
 
         if (count($p['kpis']) > 0) {
             $rows[] = ['Resumen del período'];
@@ -96,7 +105,10 @@ class ReportSummarySheet implements FromArray, WithCharts, WithColumnWidths, Wit
             $this->kpiLastRow - $this->kpiFirstRow + 1,
         );
 
-        $series = new DataSeries(DataSeries::TYPE_BARCHART, DataSeries::GROUPING_CLUSTERED, [0], [], [$categories], [$values]);
+        // A DataSeries built with no plotLabel falls back to the generic
+        // "Series1" in Excel's legend — give it a real name instead.
+        $seriesLabel = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, null, null, 1, ['Importe']);
+        $series = new DataSeries(DataSeries::TYPE_BARCHART, DataSeries::GROUPING_CLUSTERED, [0], [$seriesLabel], [$categories], [$values]);
         $series->setPlotDirection(DataSeries::DIRECTION_COL);
 
         $plotArea = new PlotArea(null, [$series]);
@@ -115,23 +127,34 @@ class ReportSummarySheet implements FromArray, WithCharts, WithColumnWidths, Wit
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
+                $accentColor = $this->payload['accentColor'];
+
+                $sheet->setShowGridlines(false);
 
                 $sheet->mergeCells('A1:D1');
                 $sheet->mergeCells('A2:D2');
-                $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(15);
+                $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(15)->getColor()->setARGB('FF'.$accentColor);
                 $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12)->getColor()->setARGB('FF52606D');
-                $sheet->getStyle('A4:A6')->getFont()->setBold(true);
-                $sheet->getStyle('A4:A6')->getFont()->getColor()->setARGB('FF52606D');
+                $sheet->getStyle("A4:A{$this->metaLastRow}")->getFont()->setBold(true);
+                $sheet->getStyle("A4:A{$this->metaLastRow}")->getFont()->getColor()->setARGB('FF52606D');
 
                 if ($this->kpiHeaderRow > 0) {
                     $sheet->mergeCells('A'.($this->kpiHeaderRow - 1).':B'.($this->kpiHeaderRow - 1));
                     $sheet->getStyle('A'.($this->kpiHeaderRow - 1))->getFont()->setBold(true)->setSize(12);
-                    $this->styleHeaderRow($sheet, $this->kpiHeaderRow, 2, '2F5FDE');
+                    $this->styleHeaderRow($sheet, $this->kpiHeaderRow, 2, $accentColor);
                     $sheet->getStyle("B{$this->kpiFirstRow}:B{$this->kpiLastRow}")
                         ->getNumberFormat()->setFormatCode('"$"#,##0.00');
                     $sheet->getStyle("A{$this->kpiFirstRow}:B{$this->kpiLastRow}")
                         ->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
                     $this->applyZebraStripes($sheet, $this->kpiFirstRow, $this->kpiLastRow, 2);
+                }
+
+                if ($this->payload['logoPath'] !== null && is_file($this->payload['logoPath'])) {
+                    $logo = new Drawing();
+                    $logo->setPath($this->payload['logoPath']);
+                    $logo->setHeight(48);
+                    $logo->setCoordinates('F1');
+                    $logo->setWorksheet($sheet);
                 }
 
                 $sheet->getSheetView()->setZoomScale(100);

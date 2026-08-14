@@ -70,6 +70,7 @@ const previewSecondaryForeground = computed(() =>
                     for="name"
                     required
                     :error="form.errors.name"
+                    tooltip="Nombre con el que esta empresa aparece en Ventia, el POS, reportes y documentos generados por el sistema."
                 >
                     <Input id="name" v-model="form.name" required />
                 </FormField>
@@ -77,6 +78,7 @@ const previewSecondaryForeground = computed(() =>
                     label="Razón social"
                     for="legal_name"
                     :error="form.errors.legal_name"
+                    tooltip="Nombre legal completo de la empresa, tal como aparece en su acta constitutiva o registro fiscal."
                 >
                     <Input id="legal_name" v-model="form.legal_name" />
                 </FormField>
@@ -92,6 +94,7 @@ const previewSecondaryForeground = computed(() =>
                     label="Correo"
                     for="email"
                     :error="form.errors.email"
+                    tooltip="Correo de contacto de la empresa, usado como referencia en documentos y comunicaciones del sistema."
                 >
                     <Input id="email" v-model="form.email" type="email" />
                 </FormField>
@@ -99,6 +102,7 @@ const previewSecondaryForeground = computed(() =>
                     label="Teléfono"
                     for="phone"
                     :error="form.errors.phone"
+                    tooltip="Teléfono de contacto principal de la empresa."
                 >
                     <Input id="phone" v-model="form.phone" />
                 </FormField>
@@ -106,6 +110,7 @@ const previewSecondaryForeground = computed(() =>
                     label="Dirección"
                     for="address"
                     :error="form.errors.address"
+                    tooltip="Domicilio fiscal o principal de la empresa, usado en documentos impresos."
                 >
                     <Input id="address" v-model="form.address" />
                 </FormField>

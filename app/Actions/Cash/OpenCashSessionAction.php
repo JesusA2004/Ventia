@@ -28,12 +28,20 @@ class OpenCashSessionAction
             CashRegister::query()->whereKey($register->id)->lockForUpdate()->firstOrFail();
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
 
-            if (CashSession::query()->where('register_id', $register->id)->where('status', CashSessionStatus::Open)->exists()) {
-                throw new CashSessionConflictException('Esta caja ya tiene una sesión abierta.');
+            $conflicting = CashSession::query()
+                ->where('register_id', $register->id)
+                ->where('status', CashSessionStatus::Open)
+                ->with('user:id,name')
+                ->first();
+
+            if ($conflicting !== null) {
+                $holder = $conflicting->user?->name ?? 'otro usuario';
+
+                throw new CashSessionConflictException("La caja «{$register->name}» ya está siendo utilizada por {$holder}.");
             }
 
             if (CashSession::query()->where('user_id', $user->id)->where('status', CashSessionStatus::Open)->exists()) {
-                throw new CashSessionConflictException('Ya tienes una sesión de caja abierta.');
+                throw new CashSessionConflictException('Ya tienes una sesión de caja abierta. Continúa al punto de venta en lugar de abrir una nueva.');
             }
 
             $amount = Decimal::of($openingAmount);

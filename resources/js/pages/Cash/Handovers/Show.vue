@@ -29,7 +29,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Cajas', href: cash.sessions.index() },
-            { title: 'Entregas pendientes', href: cash.handovers.index() },
+            { title: 'Entregas de caja', href: cash.handovers.index() },
             { title: 'Detalle de entrega', href: '#' },
         ],
     },
@@ -250,6 +250,7 @@ const statusVariant = (
                         for="supervisor_email"
                         :error="form.errors.supervisor_email"
                         required
+                        tooltip="Correo de un usuario con permiso para aprobar cierres de caja. Confirma su identidad sin cerrar tu sesión actual."
                     >
                         <Input
                             id="supervisor_email"
@@ -264,6 +265,7 @@ const statusVariant = (
                         for="supervisor_password"
                         :error="form.errors.supervisor_password"
                         required
+                        tooltip="Contraseña del supervisor, usada solo para confirmar su identidad en esta decisión."
                     >
                         <Input
                             id="supervisor_password"
@@ -278,6 +280,7 @@ const statusVariant = (
                         for="notes"
                         :error="form.errors.notes"
                         :required="activeDecision !== 'approve'"
+                        tooltip="Motivo u observaciones de esta decisión. Obligatorio al rechazar o solicitar reconteo, para dejar constancia en la auditoría."
                     >
                         <Textarea
                             id="notes"

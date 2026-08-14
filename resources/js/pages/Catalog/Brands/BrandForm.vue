@@ -41,6 +41,7 @@ function submit() {
                 for="name"
                 required
                 :error="form.errors.name"
+                tooltip="Nombre con el que identificarás esta marca en el catálogo de productos."
             >
                 <Input id="name" v-model="form.name" required autofocus />
             </FormField>
@@ -49,6 +50,7 @@ function submit() {
                 for="status"
                 required
                 :error="form.errors.status"
+                tooltip="Una marca inactiva deja de estar disponible para asignarse a productos nuevos."
             >
                 <Select v-model="form.status">
                     <SelectTrigger id="status" class="w-full">
@@ -65,6 +67,7 @@ function submit() {
                 for="description"
                 class="sm:col-span-2"
                 :error="form.errors.description"
+                tooltip="Texto opcional con información adicional sobre esta marca."
             >
                 <Textarea
                     id="description"

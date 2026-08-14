@@ -118,6 +118,7 @@ function submit() {
                         for="name"
                         required
                         :error="form.errors.name"
+                        tooltip="Nombre completo del producto, tal como se mostrará en el catálogo, reportes y tickets."
                     >
                         <Input
                             id="name"
@@ -130,6 +131,7 @@ function submit() {
                         label="Nombre corto"
                         for="short_name"
                         :error="form.errors.short_name"
+                        tooltip="Versión abreviada del nombre, usada donde el espacio es limitado (por ejemplo, tickets angostos)."
                     >
                         <Input id="short_name" v-model="form.short_name" />
                     </FormField>
@@ -138,6 +140,7 @@ function submit() {
                         for="sku"
                         required
                         :error="form.errors.sku"
+                        tooltip="Código único que identifica este producto dentro de Ventia. Se usa para búsquedas rápidas y control de inventario."
                     >
                         <Input
                             id="sku"
@@ -162,6 +165,7 @@ function submit() {
                         for="description"
                         class="sm:col-span-2"
                         :error="form.errors.description"
+                        tooltip="Texto opcional con detalles adicionales del producto, visible en su ficha."
                     >
                         <Textarea
                             id="description"
@@ -178,6 +182,7 @@ function submit() {
                         label="Categoría"
                         for="category_id"
                         :error="form.errors.category_id"
+                        tooltip="Categoría del catálogo a la que pertenece este producto, usada para organizar y filtrar en reportes."
                     >
                         <Select v-model="form.category_id">
                             <SelectTrigger id="category_id" class="w-full">
@@ -201,6 +206,7 @@ function submit() {
                         label="Marca"
                         for="brand_id"
                         :error="form.errors.brand_id"
+                        tooltip="Marca o fabricante de este producto."
                     >
                         <Select v-model="form.brand_id">
                             <SelectTrigger id="brand_id" class="w-full">
@@ -223,6 +229,7 @@ function submit() {
                         for="unit_id"
                         required
                         :error="form.errors.unit_id"
+                        tooltip="Unidad de medida en la que se compra, almacena y vende este producto (pieza, kg, litro, etc.)."
                     >
                         <Select v-model="form.unit_id">
                             <SelectTrigger id="unit_id" class="w-full">
@@ -270,6 +277,7 @@ function submit() {
                         for="product_type"
                         required
                         :error="form.errors.product_type"
+                        tooltip="Físico controla inventario, Servicio no maneja existencias, Compuesto se arma a partir de otros productos."
                     >
                         <Select v-model="form.product_type">
                             <SelectTrigger id="product_type" class="w-full">
@@ -291,6 +299,7 @@ function submit() {
                         for="tracking_type"
                         required
                         :error="form.errors.tracking_type"
+                        tooltip="Cómo Ventia rastrea las existencias de este producto: simple, por variantes, por lote, por caducidad, o sin seguimiento."
                     >
                         <Select v-model="form.tracking_type">
                             <SelectTrigger id="tracking_type" class="w-full">
@@ -326,6 +335,7 @@ function submit() {
                         label="Precio de venta inicial"
                         required
                         :error="form.errors.sale_price"
+                        tooltip="Precio al que se venderá este producto en el punto de venta. Puede ajustarse después con historial de cambios."
                     />
                     <FormCurrencyInput
                         id="minimum_price"
@@ -550,6 +560,7 @@ function submit() {
                         for="status"
                         required
                         :error="form.errors.status"
+                        tooltip="Un producto inactivo deja de estar disponible para venderse o seleccionarse en operaciones nuevas."
                     >
                         <Select v-model="form.status">
                             <SelectTrigger id="status" class="w-full">

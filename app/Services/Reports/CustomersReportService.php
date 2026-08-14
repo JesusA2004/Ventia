@@ -25,7 +25,7 @@ class CustomersReportService
     /**
      * @return array{kpis: list<array{label: string, value: string}>, tables: list<array{title: string, columns: list<string>, rows: list<list<mixed>>}>}
      */
-    public function build(User $user, CarbonInterface $from, CarbonInterface $to, ?int $branchId): array
+    public function build(User $user, CarbonInterface $from, CarbonInterface $to, ReportFilters $filters): array
     {
         $restrictCustomersToAccessibleBranches = fn ($q) => $q->when(
             ! $user->canAccessAllBranches(),
@@ -34,13 +34,17 @@ class CustomersReportService
 
         $newCustomers = Customer::query()
             ->tap($restrictCustomersToAccessibleBranches)
-            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters->customerId, fn ($q, $id) => $q->where('id', $id))
             ->whereBetween('created_at', [$from, $to])
             ->count();
 
         $bySale = Sale::query()->accessibleBy($user)
             ->join('customers', 'customers.id', '=', 'sales.customer_id')
-            ->when($branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('sales.branch_id', $id))
+            ->when($filters->customerId, fn ($q, $id) => $q->where('sales.customer_id', $id))
+            ->when($filters->registerId, fn ($q, $id) => $q->where('sales.register_id', $id))
+            ->when($filters->cashierId, fn ($q, $id) => $q->where('sales.cashier_id', $id))
             ->whereBetween('sales.completed_at', [$from, $to])
             ->where('sales.status', SaleStatus::Completed)
             ->selectRaw('customers.id, customers.name as label, COUNT(*) as tickets, SUM(sales.total) as total')
@@ -52,7 +56,8 @@ class CustomersReportService
 
         $withCredit = Customer::query()
             ->tap($restrictCustomersToAccessibleBranches)
-            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters->branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters->customerId, fn ($q, $id) => $q->where('id', $id))
             ->where('credit_limit', '>', 0)
             ->orderByDesc('current_balance')
             ->limit(15)

@@ -38,6 +38,7 @@ class ReportTableSheet implements FromArray, WithCharts, WithColumnWidths, WithE
         private readonly array $table,
         private readonly bool $includeChart,
         string $uniqueSuffix,
+        private readonly string $accentColor = '2F5FDE',
     ) {
         $this->columns = $table['columns'];
         $this->rows = $table['rows'];
@@ -118,7 +119,10 @@ class ReportTableSheet implements FromArray, WithCharts, WithColumnWidths, WithE
             $lastRow - $firstRow + 1,
         );
 
-        $series = new DataSeries(DataSeries::TYPE_BARCHART, DataSeries::GROUPING_CLUSTERED, [0], [], [$categories], [$values]);
+        // A DataSeries built with no plotLabel falls back to the generic
+        // "Series1" in Excel's legend — give it a real name instead.
+        $seriesLabel = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, null, null, 1, [$this->columns[$valueIndex]]);
+        $series = new DataSeries(DataSeries::TYPE_BARCHART, DataSeries::GROUPING_CLUSTERED, [0], [$seriesLabel], [$categories], [$values]);
         $series->setPlotDirection(DataSeries::DIRECTION_COL);
 
         $plotArea = new PlotArea(null, [$series]);
@@ -144,7 +148,8 @@ class ReportTableSheet implements FromArray, WithCharts, WithColumnWidths, WithE
                 $sheet->mergeCells("A1:{$lastColumn}1");
                 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(12);
 
-                $this->styleHeaderRow($sheet, 2, $columnCount, '2F5FDE');
+                $this->styleHeaderRow($sheet, 2, $columnCount, $this->accentColor);
+                $sheet->setShowGridlines(false);
                 $sheet->setAutoFilter("A2:{$lastColumn}2");
                 $sheet->freezePane('A3');
 

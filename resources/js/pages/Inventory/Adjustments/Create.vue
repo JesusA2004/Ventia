@@ -65,7 +65,11 @@ function submit() {
         />
 
         <form class="max-w-2xl space-y-6" @submit.prevent="submit">
-            <FormField label="Producto" :error="form.errors.product_id">
+            <FormField
+                label="Producto"
+                :error="form.errors.product_id"
+                tooltip="Producto (y variante, si aplica) sobre el que se registrará este ajuste de inventario."
+            >
                 <div
                     v-if="selectedProduct"
                     class="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
@@ -99,6 +103,7 @@ function submit() {
                     for="warehouse_id"
                     required
                     :error="form.errors.warehouse_id"
+                    tooltip="Almacén donde se aplicará este ajuste de existencias."
                 >
                     <Select v-model="form.warehouse_id">
                         <SelectTrigger id="warehouse_id" class="w-full">
@@ -142,6 +147,7 @@ function submit() {
                     for="quantity"
                     required
                     :error="form.errors.quantity"
+                    tooltip="Cantidad a mover con este ajuste, en la unidad de medida del producto."
                 >
                     <Input
                         id="quantity"
@@ -157,6 +163,7 @@ function submit() {
                     for="reason"
                     required
                     :error="form.errors.reason"
+                    tooltip="Explicación breve de por qué se realiza este ajuste, para auditoría e historial."
                 >
                     <Input id="reason" v-model="form.reason" required />
                 </FormField>
@@ -165,6 +172,7 @@ function submit() {
                     for="notes"
                     class="sm:col-span-2"
                     :error="form.errors.notes"
+                    tooltip="Detalles adicionales opcionales sobre este ajuste."
                 >
                     <Textarea id="notes" v-model="form.notes" rows="3" />
                 </FormField>

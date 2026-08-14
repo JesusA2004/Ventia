@@ -25,6 +25,7 @@ defineProps<{
         name: string;
         branch_id: number;
         branch_name: string;
+        occupied_by: string | null;
     }[];
 }>();
 
@@ -90,6 +91,7 @@ function submit() {
                 for="register_id"
                 required
                 :error="form.errors.register_id"
+                tooltip="Caja física en la que vas a operar tu turno. Solo se listan las cajas de tus sucursales disponibles."
             >
                 <Select v-model="form.register_id">
                     <SelectTrigger id="register_id" class="w-full">
@@ -100,12 +102,28 @@ function submit() {
                             v-for="option in registerOptions"
                             :key="option.id"
                             :value="option.id"
+                            :disabled="!!option.occupied_by"
                         >
                             {{ option.name }} — {{ option.branch_name }}
+                            <span
+                                v-if="option.occupied_by"
+                                class="text-muted-foreground"
+                            >
+                                (ocupada por {{ option.occupied_by }})
+                            </span>
                         </SelectItem>
                     </SelectContent>
                 </Select>
             </FormField>
+
+            <AppAlert
+                v-if="registerOptions.some((o) => o.occupied_by)"
+                variant="info"
+                class="w-full"
+            >
+                Las cajas marcadas como ocupadas ya tienen una sesión abierta
+                por otro usuario. Solo puedes abrir una caja libre.
+            </AppAlert>
 
             <FormCurrencyInput
                 id="opening_amount"
@@ -119,6 +137,7 @@ function submit() {
             <FormField
                 label="Notas de apertura"
                 for="opening_notes"
+                tooltip="Observaciones opcionales sobre esta apertura de turno."
                 :error="form.errors.opening_notes"
             >
                 <Textarea
