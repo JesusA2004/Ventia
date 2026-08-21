@@ -10,7 +10,10 @@ const VARIABLE_PAIRS: Array<{
     {
         source: 'primary_color',
         targets: ['--primary', '--sidebar-primary', '--ring', '--sidebar-ring'],
-        foregroundTargets: ['--primary-foreground', '--sidebar-primary-foreground'],
+        foregroundTargets: [
+            '--primary-foreground',
+            '--sidebar-primary-foreground',
+        ],
     },
     {
         source: 'secondary_color',
@@ -32,6 +35,13 @@ export function useCompanyTheme() {
     const page = usePage();
 
     watchEffect(() => {
+        // watchEffect runs during SSR too (unlike onMounted); document only
+        // exists client-side. Skip there — the client-side run right after
+        // hydration applies the same styles.
+        if (typeof document === 'undefined') {
+            return;
+        }
+
         const company = page.props.activeCompany;
         const root = document.documentElement;
 
@@ -41,12 +51,16 @@ export function useCompanyTheme() {
             if (isValidHex(hex)) {
                 const foreground = readableForeground(hex);
 
-                pair.targets.forEach((target) => root.style.setProperty(target, hex));
+                pair.targets.forEach((target) =>
+                    root.style.setProperty(target, hex),
+                );
                 pair.foregroundTargets.forEach((target) =>
                     root.style.setProperty(target, foreground),
                 );
             } else {
-                pair.targets.forEach((target) => root.style.removeProperty(target));
+                pair.targets.forEach((target) =>
+                    root.style.removeProperty(target),
+                );
                 pair.foregroundTargets.forEach((target) =>
                     root.style.removeProperty(target),
                 );

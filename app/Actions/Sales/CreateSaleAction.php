@@ -11,6 +11,7 @@ use App\Models\Sale;
 use App\Models\User;
 use App\Services\ActiveCompanyContext;
 use App\Services\Pricing\ProductPriceResolverService;
+use App\Services\Promotions\PromotionEligibilityService;
 use App\Services\Sales\CalculateSaleTotalsService;
 use App\Services\Sales\SaleFolioService;
 use App\Services\SettingsService;
@@ -33,6 +34,7 @@ class CreateSaleAction
         private readonly SaleFolioService $folios,
         private readonly SettingsService $settings,
         private readonly ActiveCompanyContext $activeCompany,
+        private readonly PromotionEligibilityService $promotionEligibility,
     ) {}
 
     /**
@@ -41,6 +43,7 @@ class CreateSaleAction
      *     customer_id: int, seller_id?: int|null, notes?: string|null, checkout_uuid?: string|null,
      *     status?: SaleStatus,
      *     general_discount?: array{type: string, value: numeric-string}|null,
+     *     coupon_code?: string|null,
      *     items: list<array{
      *         product_id: int, product_variant_id?: int|null, quantity: numeric-string,
      *         discount_type?: string|null, discount_value?: numeric-string|null, notes?: string|null,
@@ -78,6 +81,33 @@ class CreateSaleAction
                 $canAuthorizeDiscounts,
             );
 
+            $couponCode = $data['coupon_code'] ?? null;
+
+            if ($couponCode !== null && trim($couponCode) !== '' && ! $cashier->can('discounts.apply')) {
+                throw new InvalidArgumentException('No tienes permiso para aplicar cupones.');
+            }
+
+            $promo = $this->promotionEligibility->resolve(
+                $companyId,
+                $data['branch_id'],
+                $customer,
+                array_map(fn (array $line) => [
+                    'product_id' => $line['product_id'],
+                    'category_id' => $line['category_id'],
+                    'quantity' => $line['quantity'],
+                    'total' => $line['total'],
+                ], $lines),
+                $couponCode,
+            );
+
+            $promotion = $promo['promotion'];
+            $coupon = $promo['coupon'];
+            $promoDiscount = $promotion !== null ? $promotion['discount_amount'] : '0.0000';
+            $couponDiscount = $coupon !== null ? $coupon['discount_amount'] : '0.0000';
+            $ruleDiscount = bcadd($promoDiscount, $couponDiscount, 4);
+            $total = bccomp($ruleDiscount, $total, 4) > 0 ? '0.0000' : bcsub($total, $ruleDiscount, 4);
+            $discountTotal = bcadd($discountTotal, $ruleDiscount, 4);
+
             $sale = Sale::query()->create([
                 'company_id' => $companyId,
                 'branch_id' => $data['branch_id'],
@@ -91,6 +121,12 @@ class CreateSaleAction
                 'status' => $data['status'] ?? SaleStatus::Draft,
                 'subtotal' => $aggregate['subtotal'],
                 'discount_total' => $discountTotal,
+                'promotion_id' => $promotion['id'] ?? null,
+                'promotion_name_snapshot' => $promotion['name'] ?? null,
+                'promotion_discount_amount' => $promoDiscount,
+                'coupon_id' => $coupon['id'] ?? null,
+                'coupon_code_snapshot' => $coupon['code'] ?? null,
+                'coupon_discount_amount' => $couponDiscount,
                 'tax_total' => $aggregate['tax_total'],
                 'total' => $total,
                 'cost_total' => $aggregate['cost_total'],
@@ -110,7 +146,7 @@ class CreateSaleAction
     /**
      * @param  array{product_id: int, product_variant_id?: int|null, quantity: numeric-string, discount_type?: string|null, discount_value?: numeric-string|null, notes?: string|null}  $item
      * @param  numeric-string  $maxDiscountPercent
-     * @return array{item: array<string, mixed>, subtotal: numeric-string, discount_amount: numeric-string, tax_amount: numeric-string, total: numeric-string, unit_cost: numeric-string, quantity: numeric-string}
+     * @return array{item: array<string, mixed>, product_id: int, category_id: ?int, subtotal: numeric-string, discount_amount: numeric-string, tax_amount: numeric-string, total: numeric-string, unit_cost: numeric-string, quantity: numeric-string}
      */
     private function buildLine(array $item, int $companyId, Customer $customer, string $maxDiscountPercent, bool $canAuthorizeDiscounts, User $cashier): array
     {
@@ -199,6 +235,8 @@ class CreateSaleAction
                 'total' => $computed['total'],
                 'notes' => $item['notes'] ?? null,
             ],
+            'product_id' => $product->id,
+            'category_id' => $product->category_id,
             'subtotal' => $computed['subtotal'],
             'discount_amount' => $discountAmount,
             'tax_amount' => $computed['tax_amount'],

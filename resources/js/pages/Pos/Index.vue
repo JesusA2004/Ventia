@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { ClockIcon, PercentIcon } from '@lucide/vue';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { ClockIcon, PercentIcon, TicketPercentIcon } from '@lucide/vue';
+import { watchDebounced } from '@vueuse/core';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { toast } from 'vue-sonner';
 import CartPanel from '@/components/pos/CartPanel.vue';
 import CheckoutDialog from '@/components/pos/CheckoutDialog.vue';
@@ -18,7 +19,9 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import { firstErrorMessage } from '@/lib/apiErrors';
+import { formatCurrency } from '@/lib/format';
 import { index as posIndex } from '@/routes/pos';
 import sales from '@/routes/sales';
 import { useCartStore } from '@/stores/cart';
@@ -49,16 +52,21 @@ defineOptions({
 
 const cart = useCartStore();
 const page = usePage();
+const { can } = usePermissions();
 const grid = ref<InstanceType<typeof ProductGrid> | null>(null);
 const checkoutOpen = ref(false);
 const customerPickerOpen = ref(false);
 const suspendedOpen = ref(false);
 const variantPickerOpen = ref(false);
 const generalDiscountOpen = ref(false);
+const promotionsOpen = ref(false);
+const couponInput = ref('');
 const pendingProduct = ref<CartProduct | null>(null);
 const suspending = ref(false);
 const discountType = ref<'percentage' | 'fixed'>('percentage');
 const discountValue = ref('');
+
+const branchId = computed(() => props.session?.branch_id ?? null);
 
 onMounted(() => {
     cart.restore(page.props.activeCompany?.id ?? null);
@@ -70,6 +78,12 @@ onMounted(() => {
     window.addEventListener('keydown', onKeydown);
     grid.value?.focusBarcode();
 });
+
+watchDebounced(
+    [() => cart.lines, () => cart.customer, () => cart.couponCode],
+    () => cart.refreshEligibility(branchId.value),
+    { debounce: 400, deep: true },
+);
 
 onUnmounted(() => {
     window.removeEventListener('keydown', onKeydown);
@@ -85,6 +99,9 @@ function onKeydown(event: KeyboardEvent) {
     } else if (event.key === 'F6') {
         event.preventDefault();
         generalDiscountOpen.value = true;
+    } else if (event.key === 'F7') {
+        event.preventDefault();
+        promotionsOpen.value = true;
     } else if (event.key === 'F8') {
         event.preventDefault();
 
@@ -103,6 +120,7 @@ function onKeydown(event: KeyboardEvent) {
         suspendedOpen.value = false;
         variantPickerOpen.value = false;
         generalDiscountOpen.value = false;
+        promotionsOpen.value = false;
     } else if (event.ctrlKey && event.key === 'Delete') {
         event.preventDefault();
         requestClear();
@@ -250,6 +268,20 @@ function applyGeneralDiscount() {
         : null;
     generalDiscountOpen.value = false;
 }
+
+function openPromotions() {
+    couponInput.value = cart.couponCode;
+    promotionsOpen.value = true;
+}
+
+function applyCoupon() {
+    cart.couponCode = couponInput.value.trim();
+}
+
+function removeCoupon() {
+    couponInput.value = '';
+    cart.couponCode = '';
+}
 </script>
 
 <template>
@@ -295,6 +327,7 @@ function applyGeneralDiscount() {
                 @clear-requested="requestClear"
                 @change-customer="customerPickerOpen = true"
                 @edit-general-discount="generalDiscountOpen = true"
+                @edit-promotions="openPromotions"
             />
         </div>
     </div>
@@ -354,6 +387,97 @@ function applyGeneralDiscount() {
             </div>
             <DialogFooter>
                 <Button @click="applyGeneralDiscount">Aplicar</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="promotionsOpen">
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Promociones y cupones</DialogTitle>
+            </DialogHeader>
+
+            <div class="space-y-4">
+                <div>
+                    <p class="mb-1.5 text-sm font-medium">
+                        Promociones disponibles
+                    </p>
+                    <div
+                        v-if="cart.eligibility?.promotion"
+                        class="flex items-center justify-between rounded-lg border bg-muted/40 p-2.5 text-sm"
+                    >
+                        <span
+                            ><TicketPercentIcon
+                                class="mr-1.5 inline size-4 text-muted-foreground"
+                            />{{ cart.eligibility.promotion.name }}</span
+                        >
+                        <span class="font-medium"
+                            >-{{
+                                formatCurrency(
+                                    cart.eligibility.promotion.discount_amount,
+                                )
+                            }}</span
+                        >
+                    </div>
+                    <p v-else class="text-sm text-muted-foreground">
+                        Ninguna promoción aplica al carrito actual.
+                    </p>
+                </div>
+
+                <div v-if="can('discounts.apply')">
+                    <p class="mb-1.5 text-sm font-medium">Cupón</p>
+                    <div class="flex gap-2">
+                        <Input
+                            v-model="couponInput"
+                            placeholder="Escribir código"
+                            class="uppercase"
+                            @keydown.enter.prevent="applyCoupon"
+                        />
+                        <Button
+                            v-if="cart.couponCode"
+                            type="button"
+                            variant="outline"
+                            @click="removeCoupon"
+                        >
+                            Quitar
+                        </Button>
+                        <Button type="button" @click="applyCoupon">
+                            Aplicar
+                        </Button>
+                    </div>
+                    <p
+                        v-if="cart.eligibilityLoading"
+                        class="mt-1.5 text-xs text-muted-foreground"
+                    >
+                        Validando...
+                    </p>
+                    <p
+                        v-else-if="cart.eligibility?.coupon_error"
+                        class="mt-1.5 text-xs text-destructive"
+                    >
+                        {{ cart.eligibility.coupon_error }}
+                    </p>
+                    <div
+                        v-else-if="cart.eligibility?.coupon"
+                        class="mt-1.5 flex items-center justify-between rounded-lg border bg-muted/40 p-2.5 text-sm"
+                    >
+                        <span
+                            >Cupón «{{ cart.eligibility.coupon.code }}»
+                            aplicado</span
+                        >
+                        <span class="font-medium"
+                            >-{{
+                                formatCurrency(
+                                    cart.eligibility.coupon.discount_amount,
+                                )
+                            }}</span
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <DialogFooter>
+                <Button @click="promotionsOpen = false">Cerrar</Button>
             </DialogFooter>
         </DialogContent>
     </Dialog>

@@ -21,9 +21,7 @@
         .report-title { font-size: 12px; font-weight: bold; color: {{ $primary }}; margin: 2px 0 0; }
         .header-rule { border-bottom: 2px solid {{ $primary }}; margin-top: 6px; }
 
-        footer { position: fixed; bottom: -46px; left: 0; right: 0; font-size: 8.5px; color: #9aa5b1; text-align: center; border-top: 1px solid #e4e7eb; padding-top: 6px; }
-        .page-num:after { content: counter(page); }
-        .page-count:after { content: counter(pages); }
+        footer { position: fixed; bottom: -46px; left: 0; right: 0; border-top: 1px solid #e4e7eb; }
 
         .meta { width: 100%; border-collapse: collapse; margin: 4px 0 16px; }
         .meta td { padding: 2px 0; font-size: 9.5px; color: #52606d; }
@@ -65,9 +63,11 @@
         <div class="header-rule"></div>
     </header>
 
-    <footer>
-        Generado por Ventia — {{ $generatedAt }} — Página <span class="page-num"></span> de <span class="page-count"></span>
-    </footer>
+    {{-- The footer's text ("Generado por... — Página X de Y") is drawn by
+         ReportController via Canvas::page_text() after render, not here: dompdf's
+         CSS counter(pages) always resolves to 0 (only counter(page), the current
+         page, is actually supported), so a real total needs the page_text() API. --}}
+    <footer></footer>
 
     <table class="meta">
         <tr>
@@ -110,14 +110,14 @@
         </table>
     @endif
 
-    @if (!empty($chartSvg))
+    @foreach ($charts ?? [] as $chart)
         <div class="chart-section">
-            <p class="section-title">Tendencia</p>
+            <p class="section-title">{{ $chart['title'] }}</p>
             <div class="chart-frame">
-                {!! $chartSvg !!}
+                {!! $chart['image'] !!}
             </div>
         </div>
-    @endif
+    @endforeach
 
     @foreach ($data['tables'] ?? [] as $table)
         <table class="data">

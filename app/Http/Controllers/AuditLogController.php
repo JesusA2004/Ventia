@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
+use App\Support\AuditActionLabels;
 use App\Support\PaginatedResource;
 use App\Support\PermissionLabels;
 use Illuminate\Http\Request;
@@ -69,7 +70,7 @@ class AuditLogController extends Controller
                 'modules' => collect(AuditLog::query()->distinct()->orderBy('module')->pluck('module'))
                     ->map(fn (string $module) => ['value' => $module, 'label' => PermissionLabels::group($module)])
                     ->values(),
-                'actions' => collect(AuditLog::query()->distinct()->orderBy('action')->pluck('action'))->values(),
+                'actions' => AuditActionLabels::options(AuditLog::query()->distinct()->pluck('action')),
             ],
         ]);
     }

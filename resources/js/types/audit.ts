@@ -9,6 +9,7 @@ export type AuditLog = {
     module: string;
     module_label: string;
     action: string;
+    action_label: string;
     entity_type: string | null;
     entity_id: number | null;
     description: string;

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\AuditLog;
+use App\Support\AuditActionLabels;
 use App\Support\PermissionLabels;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -26,6 +27,7 @@ class AuditLogResource extends JsonResource
             'module' => $this->module,
             'module_label' => PermissionLabels::group($this->module),
             'action' => $this->action,
+            'action_label' => AuditActionLabels::label($this->action),
             'entity_type' => $this->entity_type,
             'entity_id' => $this->entity_id,
             'description' => $this->description,

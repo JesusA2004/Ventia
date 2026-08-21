@@ -86,6 +86,7 @@ class StockCountController extends Controller
                 'items.product:id,name,sku',
                 'items.variant:id,sku',
                 'warehouse:id,name',
+                'branch:id,name',
                 'startedByUser:id,name',
                 'completedByUser:id,name',
                 'appliedByUser:id,name',

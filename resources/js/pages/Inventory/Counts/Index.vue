@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ClipboardListIcon, PlusIcon } from '@lucide/vue';
+import { ClipboardListIcon, EyeIcon, PlusIcon } from '@lucide/vue';
 import EmptyState from '@/components/EmptyState.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import type { DataTableColumn } from '@/components/tables/ServerDataTable.vue';
@@ -14,6 +14,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePermissions } from '@/composables/usePermissions';
 import { create, index, show } from '@/routes/inventory/counts';
 import type { Paginated, StockCount } from '@/types';
@@ -36,6 +41,7 @@ const columns: DataTableColumn[] = [
     { key: 'warehouse_name', label: 'Almacén' },
     { key: 'status_label', label: 'Estado' },
     { key: 'created_at', label: 'Creado' },
+    { key: 'actions', label: '', class: 'text-right' },
 ];
 
 function filterByStatus(value: string) {
@@ -103,6 +109,25 @@ function filterByStatus(value: string) {
             </template>
             <template #cell-created_at="{ row }">
                 {{ new Date(row.created_at).toLocaleDateString('es-MX') }}
+            </template>
+            <template #cell-actions="{ row }">
+                <div class="flex justify-end">
+                    <Tooltip>
+                        <TooltipTrigger as-child>
+                            <Button
+                                as-child
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Ver detalle del conteo"
+                            >
+                                <Link :href="show(row.id)">
+                                    <EyeIcon />
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Ver detalle</TooltipContent>
+                    </Tooltip>
+                </div>
             </template>
         </ServerDataTable>
     </div>

@@ -6,14 +6,18 @@ use App\Actions\Cash\RegisterCashMovementAction;
 use App\Actions\Inventory\RecordInventoryMovementAction;
 use App\Enums\CashMovementType;
 use App\Enums\CashSessionStatus;
+use App\Enums\CustomerType;
 use App\Enums\InventoryMovementType;
 use App\Enums\PaymentMethodType;
 use App\Enums\SaleStatus;
 use App\Exceptions\InsufficientStockException;
 use App\Models\CashSession;
+use App\Models\Coupon;
+use App\Models\Customer;
 use App\Models\InventoryBalance;
 use App\Models\PaymentMethod;
 use App\Models\ProductLot;
+use App\Models\Promotion;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\User;
@@ -89,6 +93,16 @@ class CompleteSaleAction
             // final concurrency-safe guard for the rare race that slips
             // past here.
             $this->assertSufficientStock($sale, $warehouse);
+
+            // Same reasoning as the stock re-check above, for a limited-use
+            // promotion/coupon: PromotionEligibilityService already confirmed
+            // eligibility inside createSale->execute() above, but without a
+            // lock — two concurrent checkouts could both pass that check for
+            // the last remaining use. Locking the row here, right before
+            // this sale becomes Completed (the only status that counts
+            // toward usage_limit — see PromotionEligibilityService), closes
+            // that window.
+            $this->assertPromotionAndCouponStillAvailable($sale, $companyId);
 
             $paymentMethods = PaymentMethod::query()->where('status', 'active')->get();
             $validated = $this->paymentValidator->validate($payments, (string) $sale->total, $paymentMethods);
@@ -184,6 +198,56 @@ class CompleteSaleAction
         }
 
         return $session;
+    }
+
+    private function assertPromotionAndCouponStillAvailable(Sale $sale, int $companyId): void
+    {
+        $customer = $sale->customer;
+
+        if ($sale->promotion_id !== null) {
+            /** @var Promotion $promotion */
+            $promotion = Promotion::query()->whereKey($sale->promotion_id)->lockForUpdate()->firstOrFail();
+            $this->assertUsageLimitNotExceeded($promotion->usage_limit, $promotion->usage_limit_per_customer, 'promotion_id', $promotion->id, $companyId, $customer, 'Esta promoción');
+        }
+
+        if ($sale->coupon_id !== null) {
+            /** @var Coupon $coupon */
+            $coupon = Coupon::query()->whereKey($sale->coupon_id)->lockForUpdate()->firstOrFail();
+            $this->assertUsageLimitNotExceeded($coupon->usage_limit, $coupon->usage_limit_per_customer, 'coupon_id', $coupon->id, $companyId, $customer, 'Este cupón');
+        }
+    }
+
+    /**
+     * @param  'promotion_id'|'coupon_id'  $column
+     */
+    private function assertUsageLimitNotExceeded(?int $usageLimit, ?int $usageLimitPerCustomer, string $column, int $id, int $companyId, Customer $customer, string $subject): void
+    {
+        if ($usageLimit !== null) {
+            $used = Sale::query()->withoutGlobalScopes()
+                ->where('company_id', $companyId)
+                ->where($column, $id)
+                ->where('status', SaleStatus::Completed)
+                ->count();
+
+            if ($used >= $usageLimit) {
+                throw new InvalidArgumentException("{$subject} ya alcanzó su límite de usos. Quita la promoción o el cupón para continuar.");
+            }
+        }
+
+        // See PromotionEligibilityService: a per-customer limit is
+        // meaningless against the shared "Público general" customer.
+        if ($usageLimitPerCustomer !== null && $customer->customer_type !== CustomerType::GeneralPublic) {
+            $usedByCustomer = Sale::query()->withoutGlobalScopes()
+                ->where('company_id', $companyId)
+                ->where($column, $id)
+                ->where('customer_id', $customer->id)
+                ->where('status', SaleStatus::Completed)
+                ->count();
+
+            if ($usedByCustomer >= $usageLimitPerCustomer) {
+                throw new InvalidArgumentException("{$subject} ya alcanzó su límite de usos para este cliente.");
+            }
+        }
     }
 
     /**

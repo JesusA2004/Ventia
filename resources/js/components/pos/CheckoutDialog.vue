@@ -118,6 +118,7 @@ async function submit() {
                 notes: cart.notes || null,
                 checkout_uuid: checkoutUuid,
                 general_discount: cart.generalDiscount,
+                coupon_code: cart.couponCode || null,
                 items: cart.lines.map((line) => ({
                     product_id: line.product_id,
                     product_variant_id: line.product_variant_id,
@@ -162,6 +163,25 @@ async function submit() {
             <DialogHeader>
                 <DialogTitle>Cobrar venta</DialogTitle>
             </DialogHeader>
+
+            <div
+                v-if="cart.eligibility?.promotion || cart.eligibility?.coupon"
+                class="space-y-1 rounded-lg border bg-muted/40 p-2.5 text-xs"
+            >
+                <p v-if="cart.eligibility.promotion">
+                    Promoción aplicada:
+                    {{ cart.eligibility.promotion.name }} (-{{
+                        formatCurrency(
+                            cart.eligibility.promotion.discount_amount,
+                        )
+                    }})
+                </p>
+                <p v-if="cart.eligibility.coupon">
+                    Cupón aplicado: {{ cart.eligibility.coupon.code }} (-{{
+                        formatCurrency(cart.eligibility.coupon.discount_amount)
+                    }})
+                </p>
+            </div>
 
             <div class="grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm">
                 <div>
@@ -281,7 +301,7 @@ async function submit() {
                     :disabled="
                         processing ||
                         cart.paymentsPending > 0.0001 ||
-                        !cart.payments.length
+                        (!cart.payments.length && cart.estimatedTotal > 0.0001)
                     "
                     @click="submit"
                 >

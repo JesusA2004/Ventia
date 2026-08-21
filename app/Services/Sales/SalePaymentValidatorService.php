@@ -19,6 +19,12 @@ class SalePaymentValidatorService
     public function validate(array $payments, string $total, Collection $paymentMethods): array
     {
         if ($payments === []) {
+            // A promotion/coupon can legitimately bring the total to zero —
+            // nothing to collect, so no payment method is required.
+            if (bccomp($total, '0', 4) <= 0) {
+                return ['amount_received' => '0.0000', 'change_amount' => '0.0000'];
+            }
+
             throw new InvalidArgumentException('Debes registrar al menos un método de pago.');
         }
 

@@ -57,6 +57,32 @@ test('a user without reports.view cannot access the reports module', function ()
         ->assertForbidden();
 });
 
+test('cashier options only include users from the active company', function () {
+    $companyA = posFixture();
+    $companyB = posFixture();
+
+    $cashierIds = collect(
+        $this->actingAs($companyA['admin'])
+            ->get(route('reports.index'))
+            ->assertOk()
+            ->inertiaPage()['props']['cashierOptions']
+    )->pluck('id');
+
+    expect($cashierIds)
+        ->toContain($companyA['admin']->id)
+        ->and($cashierIds)->not->toContain($companyB['admin']->id, $companyB['cashier']->id);
+});
+
+test('filtering reports by a cashier id from another company is ignored, not applied', function () {
+    $companyA = posFixture();
+    $companyB = posFixture();
+
+    $this->actingAs($companyA['admin'])
+        ->get(route('reports.index', ['cashier_id' => $companyB['admin']->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('filters.cashier_id', null));
+});
+
 test('csv export returns the summary as a downloadable file', function () {
     $fixture = posFixture();
 

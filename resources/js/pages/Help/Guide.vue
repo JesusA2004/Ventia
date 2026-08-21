@@ -75,6 +75,11 @@ const modules = [
         description: 'Catálogo de clientes y su historial de compras.',
     },
     {
+        name: 'Promociones y cupones',
+        description:
+            'Promociones: reglas de descuento que se aplican solas cuando la venta cumple las condiciones (sucursal, producto/categoría, compra mínima). Cupones: códigos que el cajero captura en el POS. Solo aplica la mejor promoción automática y, si el cupón es combinable, se suma; si no, el cupón la reemplaza.',
+    },
+    {
         name: 'Productos',
         description:
             'Catálogo de productos, variantes, categorías, marcas, unidades e impuestos.',

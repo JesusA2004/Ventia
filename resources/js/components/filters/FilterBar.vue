@@ -8,9 +8,18 @@ const props = defineProps<{
 }>();
 
 function onSearch(value: string) {
+    // Merge in whatever other filters are already in the URL (e.g. a status
+    // select next to this bar via the default slot) so searching doesn't
+    // silently clear them — except page, since a new search should land
+    // back on page 1.
+    const otherFilters = Object.fromEntries(
+        new URLSearchParams(window.location.search),
+    );
+    delete otherFilters.page;
+
     router.get(
         window.location.pathname,
-        { search: value || undefined },
+        { ...otherFilters, search: value || undefined },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 }

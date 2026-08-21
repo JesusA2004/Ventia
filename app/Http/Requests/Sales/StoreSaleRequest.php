@@ -35,6 +35,11 @@ class StoreSaleRequest extends FormRequest
             'general_discount.type' => ['required_with:general_discount', Rule::in(['percentage', 'fixed'])],
             'general_discount.value' => ['required_with:general_discount', 'numeric', 'min:0'],
 
+            // Existence/eligibility (active, in range, scope, usage limits)
+            // is re-validated server-side in PromotionEligibilityService —
+            // this rule only bounds the input's shape.
+            'coupon_code' => ['nullable', 'string', 'max:40'],
+
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', Rule::exists('products', 'id')->where('company_id', $companyId)],
             'items.*.product_variant_id' => ['nullable', Rule::exists('product_variants', 'id')->where('company_id', $companyId)],
@@ -43,7 +48,12 @@ class StoreSaleRequest extends FormRequest
             'items.*.discount_value' => ['nullable', 'numeric', 'min:0'],
             'items.*.notes' => ['nullable', 'string'],
 
-            'payments' => ['required', 'array', 'min:1'],
+            // "At least one payment" isn't enforced here: whether that's
+            // actually required depends on the sale's total, which isn't
+            // known until CreateSaleAction resolves pricing/discounts — a
+            // promotion/coupon can legitimately bring it to zero. See
+            // SalePaymentValidatorService, which has that context.
+            'payments' => ['present', 'array'],
             'payments.*.payment_method_id' => ['required', Rule::exists('payment_methods', 'id')->where('company_id', $companyId)],
             'payments.*.amount' => ['required', 'numeric', 'min:0.01'],
             'payments.*.reference' => ['nullable', 'string', 'max:255'],

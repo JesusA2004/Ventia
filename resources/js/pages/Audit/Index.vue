@@ -12,7 +12,13 @@ import { Input } from '@/components/ui/input';
 import { auditActionVariant } from '@/lib/auditBadges';
 import { formatDateTime } from '@/lib/format';
 import { index as auditIndex, show as auditShow } from '@/routes/audit';
-import type { AuditFilterOption, AuditLog, Branch, Company, Paginated } from '@/types';
+import type {
+    AuditFilterOption,
+    AuditLog,
+    Branch,
+    Company,
+    Paginated,
+} from '@/types';
 
 const props = defineProps<{
     logs: Paginated<AuditLog>;
@@ -33,7 +39,7 @@ const props = defineProps<{
         branches: (Branch & { company_id: number })[];
         users: { id: number; name: string }[];
         modules: AuditFilterOption[];
-        actions: string[];
+        actions: AuditFilterOption[];
     };
 }>();
 
@@ -192,9 +198,7 @@ function apply(partial: Record<string, string | number | undefined>) {
             <SearchableSelect
                 class="w-44"
                 :model-value="filters.action ?? null"
-                :options="
-                    filterOptions.actions.map((a) => ({ value: a, label: a }))
-                "
+                :options="filterOptions.actions"
                 placeholder="Tipo de acción"
                 all-label="Todas las acciones"
                 @update:model-value="(v) => apply({ action: v ?? undefined })"
@@ -210,14 +214,16 @@ function apply(partial: Record<string, string | number | undefined>) {
                 />
             </template>
             <template #cell-created_at="{ row }">
-                <span class="text-sm">{{ formatDateTime(row.created_at) }}</span>
+                <span class="text-sm">{{
+                    formatDateTime(row.created_at)
+                }}</span>
             </template>
             <template #cell-module_label="{ row }">
                 <Badge variant="outline">{{ row.module_label }}</Badge>
             </template>
             <template #cell-action="{ row }">
                 <Badge :variant="auditActionVariant(row.action)">{{
-                    row.action.replaceAll('_', ' ')
+                    row.action_label
                 }}</Badge>
             </template>
             <template #cell-description="{ row }">

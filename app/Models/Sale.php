@@ -27,6 +27,12 @@ use Illuminate\Support\Carbon;
  * @property SaleStatus $status
  * @property numeric-string $subtotal
  * @property numeric-string $discount_total
+ * @property int|null $promotion_id
+ * @property string|null $promotion_name_snapshot
+ * @property numeric-string $promotion_discount_amount
+ * @property int|null $coupon_id
+ * @property string|null $coupon_code_snapshot
+ * @property numeric-string $coupon_discount_amount
  * @property numeric-string $tax_total
  * @property numeric-string $total
  * @property numeric-string $cost_total
@@ -44,7 +50,10 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'company_id', 'branch_id', 'warehouse_id', 'register_id', 'cash_session_id',
     'customer_id', 'cashier_id', 'seller_id', 'folio', 'status',
-    'subtotal', 'discount_total', 'tax_total', 'total', 'cost_total', 'profit_total',
+    'subtotal', 'discount_total',
+    'promotion_id', 'promotion_name_snapshot', 'promotion_discount_amount',
+    'coupon_id', 'coupon_code_snapshot', 'coupon_discount_amount',
+    'tax_total', 'total', 'cost_total', 'profit_total',
     'amount_received', 'change_amount', 'checkout_uuid', 'notes', 'completed_at',
     'cancelled_at', 'cancelled_by', 'cancellation_reason',
 ])]
@@ -59,6 +68,8 @@ class Sale extends Model
             'status' => SaleStatus::class,
             'subtotal' => 'decimal:4',
             'discount_total' => 'decimal:4',
+            'promotion_discount_amount' => 'decimal:4',
+            'coupon_discount_amount' => 'decimal:4',
             'tax_total' => 'decimal:4',
             'total' => 'decimal:4',
             'cost_total' => 'decimal:4',
@@ -92,6 +103,18 @@ class Sale extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /** @return BelongsTo<Promotion, $this> */
+    public function promotion(): BelongsTo
+    {
+        return $this->belongsTo(Promotion::class);
+    }
+
+    /** @return BelongsTo<Coupon, $this> */
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     /** @return BelongsTo<User, $this> */

@@ -125,15 +125,23 @@ class SaleController extends Controller
                 'notes' => $request->validated('notes'),
                 'checkout_uuid' => $request->validated('checkout_uuid'),
                 'general_discount' => $request->validated('general_discount'),
+                'coupon_code' => $request->validated('coupon_code'),
                 'items' => $request->validated('items'),
             ], $request->validated('payments'), $request->user());
         } catch (InsufficientStockException|InvalidArgumentException $e) {
             throw ValidationException::withMessages(['items' => $e->getMessage()]);
         }
 
+        $ruleNote = match (true) {
+            $sale->promotion_id !== null && $sale->coupon_id !== null => " Promoción: «{$sale->promotion_name_snapshot}», cupón: «{$sale->coupon_code_snapshot}».",
+            $sale->promotion_id !== null => " Promoción: «{$sale->promotion_name_snapshot}».",
+            $sale->coupon_id !== null => " Cupón: «{$sale->coupon_code_snapshot}».",
+            default => '',
+        };
+
         $this->audit->log(
             'sales', 'completed',
-            "Registró la venta {$sale->folio} por " . number_format((float) $sale->total, 2) . '.',
+            "Registró la venta {$sale->folio} por ".number_format((float) $sale->total, 2).'.'.$ruleNote,
             $sale,
             branchId: $sale->branch_id,
         );

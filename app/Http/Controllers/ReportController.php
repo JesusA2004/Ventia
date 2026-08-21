@@ -20,8 +20,8 @@ use App\Services\Reports\ProductsReportService;
 use App\Services\Reports\ReportFilters;
 use App\Services\Reports\SalesReportService;
 use App\Services\Reports\SummaryReportService;
+use App\Support\PdfBarChart;
 use App\Support\ReportChartTitles;
-use App\Support\SvgBarChart;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
@@ -79,7 +79,7 @@ class ReportController extends Controller
             : 'summary';
 
         [$from, $to] = $this->resolveDateRange($request);
-        $filters = ReportFilters::fromRequest($request);
+        $filters = ReportFilters::fromRequest($request, $this->activeCompany->companyId());
         $groupBy = $this->resolveGroupBy($request);
 
         return Inertia::render('Reports/Index', [
@@ -93,7 +93,14 @@ class ReportController extends Controller
             ],
             'branchOptions' => BranchResource::collection(Branch::query()->orderBy('name')->get()),
             'registerOptions' => CashRegister::query()->accessibleBy($user)->orderBy('name')->get(['id', 'name']),
-            'cashierOptions' => User::query()->orderBy('name')->get(['id', 'name']),
+            // User has no BelongsToCompany scope (see app/Models/User.php), so
+            // this filter can't be left to a global scope like the options
+            // below it — omitting it would leak every company's cashiers into
+            // this dropdown.
+            'cashierOptions' => User::query()
+                ->where('company_id', $this->activeCompany->companyId())
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'categoryOptions' => Category::query()->where('status', 'active')->orderBy('name')->get(['id', 'name']),
             'paymentMethodOptions' => PaymentMethod::query()->where('status', 'active')->orderBy('sort_order')->get(['id', 'name']),
             'productOptions' => Product::query()->where('status', 'active')->orderBy('name')->limit(500)->get(['id', 'name']),
@@ -133,11 +140,11 @@ class ReportController extends Controller
 
     /**
      * Professional PDF: branded header, report name, period/branch filters,
-     * generation timestamp, KPI cards, a chart and detail tables. dompdf
-     * can't run Chart.js (canvas-based), so the chart is rendered as static
-     * SVG (see SvgBarChart) instead of a screenshot or headless-browser
-     * render. Sales/Productos/Clientes tend to have the widest tables, so
-     * those render landscape; the rest stay portrait.
+     * generation timestamp, KPI cards, up to three charts and detail
+     * tables. dompdf can't run Chart.js (canvas-based), so charts are
+     * rendered as PNGs (see PdfBarChart) instead of a screenshot or
+     * headless-browser render. Sales/Productos/Clientes tend to have the
+     * widest tables, so those render landscape; the rest stay portrait.
      */
     public function exportPdf(Request $request): HttpResponse
     {
@@ -148,6 +155,7 @@ class ReportController extends Controller
         $landscape = in_array($tab, ['sales', 'products', 'customers'], true);
         $company = $this->activeCompany->company();
         $logoPath = $this->resolveLogoPath($company);
+        $generatedAt = now()->format('d/m/Y H:i');
 
         $pdf = Pdf::loadView('reports.pdf', [
             'reportTitle' => 'Reporte de '.(self::TAB_LABELS[$tab] ?? $tab),
@@ -156,54 +164,89 @@ class ReportController extends Controller
             'branchName' => $branchId ? Branch::query()->withoutGlobalScopes()->find($branchId)?->name : null,
             'filterLabels' => $this->resolveFilterLabels($reportFilters),
             'filters' => ['date_from' => $from->toDateString(), 'date_to' => $to->toDateString()],
-            'generatedAt' => now()->format('d/m/Y H:i'),
+            'generatedAt' => $generatedAt,
             'generatedBy' => $request->user()->name,
             'data' => $data,
-            'chartSvg' => $this->chartSvgFor($tab, $data),
+            'charts' => $this->chartsFor($tab, $data, $landscape),
         ])->setPaper('letter', $landscape ? 'landscape' : 'portrait');
+
+        // page_text() reads Canvas::$_pages/$_page_count as they stand the
+        // moment it's called — it does not defer until the document is
+        // fully laid out. render() must run first (and be marked done, so
+        // stream() below doesn't render a second time) or every page's
+        // {PAGE_COUNT} freezes at whatever the count was when this ran.
+        $pdf->render();
+        $this->drawFooter($pdf, "Generado por Ventia — {$generatedAt} — Página {PAGE_NUM} de {PAGE_COUNT}");
 
         return $pdf->stream("reporte-{$tab}.pdf");
     }
 
     /**
-     * Builds the same chart the "Reportes" screen shows for this tab, as
-     * static SVG for the PDF (dompdf can't run Chart.js/canvas). Reuses
-     * whichever KPI/table the frontend already charts, so the PDF and the
-     * on-screen report never disagree about what "the chart" for a tab is.
+     * Draws the footer's page-number line via dompdf's Canvas::page_text()
+     * instead of the blade's CSS: dompdf resolves counter(page) (current
+     * page) but not counter(pages) (total), which always evaluates to 0.
+     * Must be called after $pdf->render() — see exportPdf().
+     */
+    private function drawFooter(\Barryvdh\DomPDF\PDF $pdf, string $text): void
+    {
+        $canvas = $pdf->getDomPDF()->getCanvas();
+        $font = $pdf->getDomPDF()->getFontMetrics()->getFont('helvetica');
+        $size = 8.5;
+        // {PAGE_NUM}/{PAGE_COUNT} are still literal here, so this measures the
+        // template rather than the final digits — close enough to center a
+        // short one-line footer, and avoids depending on the resolved width.
+        $width = $canvas->get_text_width($text, $font, $size);
+        $x = ($canvas->get_width() - $width) / 2;
+        $y = $canvas->get_height() - 27;
+
+        $canvas->page_text($x, $y, $text, $font, $size, [0.604, 0.647, 0.694]);
+    }
+
+    /**
+     * Builds up to three charts for this tab's PDF, each one a specific,
+     * named breakdown (e.g. "Ventas por sucursal") instead of one generic
+     * "Tendencia" — see ReportChartTitles::PDF_CHARTS_BY_TAB. Every chart
+     * reuses a table this same $data array already contains, so the PDF
+     * never shows a number the on-screen report/Excel export disagrees
+     * with. A configured table/column that isn't present for this data
+     * (e.g. a cost column hidden by permission, or a table with no rows)
+     * is skipped rather than erroring.
      *
      * @param  array{kpis: list<array{label: string, value: string}>, tables: list<array{title: string, columns: list<string>, rows: list<list<mixed>>}>}  $data
+     * @return list<array{title: string, image: string}>
      */
-    private function chartSvgFor(string $tab, array $data): string
+    private function chartsFor(string $tab, array $data, bool $landscape): array
     {
-        $tableTitle = ReportChartTitles::TABLE_BY_TAB[$tab] ?? null;
+        $configs = ReportChartTitles::PDF_CHARTS_BY_TAB[$tab] ?? [];
+        $width = $landscape ? 700 : 520;
+        $charts = [];
 
-        if ($tableTitle === null) {
-            $kpis = $data['kpis'];
+        foreach ($configs as $title => $valueColumn) {
+            $table = collect($data['tables'])->firstWhere('title', $title);
 
-            if (count($kpis) === 0) {
-                return '';
+            if ($table === null || count($table['rows']) === 0) {
+                continue;
             }
 
-            return SvgBarChart::render(
-                array_column($kpis, 'label'),
-                array_map(fn (array $kpi) => (float) str_replace(',', '', $kpi['value']), $kpis),
-                'Resumen del período',
+            $valueIndex = array_search($valueColumn, $table['columns'], true);
+
+            if ($valueIndex === false) {
+                continue;
+            }
+
+            $image = PdfBarChart::render(
+                array_map(fn (array $row) => (string) $row[0], $table['rows']),
+                array_map(fn (array $row) => (float) str_replace(',', '', (string) $row[$valueIndex]), $table['rows']),
+                $title,
+                width: $width,
             );
+
+            if ($image !== '') {
+                $charts[] = ['title' => $title, 'image' => $image];
+            }
         }
 
-        $table = collect($data['tables'])->firstWhere('title', $tableTitle);
-
-        if ($table === null || count($table['rows']) === 0) {
-            return '';
-        }
-
-        $valueIndex = count($table['columns']) - 1;
-
-        return SvgBarChart::render(
-            array_map(fn (array $row) => (string) $row[0], $table['rows']),
-            array_map(fn (array $row) => (float) str_replace(',', '', (string) $row[$valueIndex]), $table['rows']),
-            $table['title'],
-        );
+        return $charts;
     }
 
     /**
@@ -258,7 +301,7 @@ class ReportController extends Controller
         [$localFrom, $localTo] = $this->resolveDateRange($request);
         $from = $localFrom->copy()->utc();
         $to = $localTo->copy()->utc();
-        $filters = ReportFilters::fromRequest($request);
+        $filters = ReportFilters::fromRequest($request, $this->activeCompany->companyId());
         $groupBy = $this->resolveGroupBy($request);
 
         // from/to returned here are the company-local range (for display,

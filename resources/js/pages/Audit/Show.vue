@@ -40,7 +40,11 @@ const diffRows = computed<DiffRow[]>(() => {
 
     return Array.from(fields)
         .filter((field) => display(before[field]) !== display(after[field]))
-        .map((field) => ({ field, before: before[field], after: after[field] }));
+        .map((field) => ({
+            field,
+            before: before[field],
+            after: after[field],
+        }));
 });
 
 defineOptions({
@@ -63,7 +67,7 @@ defineOptions({
         >
             <template #actions>
                 <Badge :variant="auditActionVariant(log.action)">{{
-                    log.action.replaceAll('_', ' ')
+                    log.action_label
                 }}</Badge>
             </template>
         </PageHeader>
@@ -87,7 +91,8 @@ defineOptions({
             </div>
             <div>
                 <p class="text-xs text-muted-foreground">Acción</p>
-                <p class="text-sm">{{ log.action }}</p>
+                <p class="text-sm">{{ log.action_label }}</p>
+                <p class="text-xs text-muted-foreground">{{ log.action }}</p>
             </div>
             <div v-if="log.entity_type">
                 <p class="text-xs text-muted-foreground">Entidad</p>
@@ -124,16 +129,28 @@ defineOptions({
                 <table class="w-full text-sm">
                     <thead class="bg-muted/40 text-xs text-muted-foreground">
                         <tr>
-                            <th class="px-3 py-2 text-left font-medium">Campo</th>
-                            <th class="px-3 py-2 text-left font-medium">Antes</th>
-                            <th class="px-3 py-2 text-left font-medium">Después</th>
+                            <th class="px-3 py-2 text-left font-medium">
+                                Campo
+                            </th>
+                            <th class="px-3 py-2 text-left font-medium">
+                                Antes
+                            </th>
+                            <th class="px-3 py-2 text-left font-medium">
+                                Después
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y">
                         <tr v-for="row in diffRows" :key="row.field">
-                            <td class="px-3 py-2 font-medium">{{ row.field }}</td>
-                            <td class="px-3 py-2 text-muted-foreground">{{ display(row.before) }}</td>
-                            <td class="px-3 py-2 font-medium text-foreground">{{ display(row.after) }}</td>
+                            <td class="px-3 py-2 font-medium">
+                                {{ row.field }}
+                            </td>
+                            <td class="px-3 py-2 text-muted-foreground">
+                                {{ display(row.before) }}
+                            </td>
+                            <td class="px-3 py-2 font-medium text-foreground">
+                                {{ display(row.after) }}
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -146,18 +163,20 @@ defineOptions({
             </Button>
             <div v-if="showJson" class="grid gap-4 sm:grid-cols-2">
                 <div v-if="log.old_values">
-                    <p class="mb-1 text-xs text-muted-foreground">Valores anteriores</p>
+                    <p class="mb-1 text-xs text-muted-foreground">
+                        Valores anteriores
+                    </p>
                     <pre
                         class="overflow-x-auto rounded-lg border bg-muted/40 p-3 text-xs"
-                        >{{ JSON.stringify(log.old_values, null, 2) }}</pre
-                    >
+                        >{{ JSON.stringify(log.old_values, null, 2) }}</pre>
                 </div>
                 <div v-if="log.new_values">
-                    <p class="mb-1 text-xs text-muted-foreground">Valores nuevos</p>
+                    <p class="mb-1 text-xs text-muted-foreground">
+                        Valores nuevos
+                    </p>
                     <pre
                         class="overflow-x-auto rounded-lg border bg-muted/40 p-3 text-xs"
-                        >{{ JSON.stringify(log.new_values, null, 2) }}</pre
-                    >
+                        >{{ JSON.stringify(log.new_values, null, 2) }}</pre>
                 </div>
             </div>
         </div>

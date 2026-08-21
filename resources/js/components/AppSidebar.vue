@@ -26,6 +26,8 @@ import {
     ShoppingCart,
     SlidersHorizontal,
     Tags,
+    Ticket,
+    TicketPercent,
     Users,
     Wallet,
 } from '@lucide/vue';
@@ -61,6 +63,8 @@ import { index as transfersIndex } from '@/routes/inventory/transfers';
 import { index as paymentMethodsIndex } from '@/routes/payment-methods';
 import { index as posIndex } from '@/routes/pos';
 import { index as productsIndex } from '@/routes/products';
+import { index as couponsIndex } from '@/routes/promotions/coupons';
+import { index as promotionsIndex } from '@/routes/promotions/promotions';
 import { index as reportsIndex } from '@/routes/reports';
 import { index as rolesIndex } from '@/routes/roles';
 import salesRoutes from '@/routes/sales';
@@ -171,6 +175,24 @@ const catalogNavItems = computed<NavItem[]>(() => {
 
     if (can('taxes.manage')) {
         items.push({ title: 'Impuestos', href: taxesIndex(), icon: Percent });
+    }
+
+    return items;
+});
+
+const promotionsNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [];
+
+    if (can('promotions.manage')) {
+        items.push({
+            title: 'Promociones',
+            href: promotionsIndex(),
+            icon: TicketPercent,
+        });
+    }
+
+    if (can('coupons.manage')) {
+        items.push({ title: 'Cupones', href: couponsIndex(), icon: Ticket });
     }
 
     return items;
@@ -341,6 +363,11 @@ const helpNavItems = computed<NavItem[]>(() => [
                 v-if="catalogNavItems.length > 0"
                 :items="catalogNavItems"
                 label="Catálogo"
+            />
+            <NavMain
+                v-if="promotionsNavItems.length > 0"
+                :items="promotionsNavItems"
+                label="Promociones"
             />
             <NavMain
                 v-if="inventoryNavItems.length > 0"

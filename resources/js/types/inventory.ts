@@ -140,6 +140,7 @@ export type StockCount = {
     status_label: string;
     warehouse_id: number;
     warehouse_name?: string;
+    branch_name?: string | null;
     started_by_name?: string | null;
     completed_by_name?: string | null;
     applied_by_name?: string | null;

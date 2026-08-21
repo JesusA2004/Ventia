@@ -21,6 +21,7 @@ class StockCountResource extends JsonResource
             'status_label' => $this->status->label(),
             'warehouse_id' => $this->warehouse_id,
             'warehouse_name' => $this->whenLoaded('warehouse', fn () => $this->warehouse->name),
+            'branch_name' => $this->whenLoaded('branch', fn () => $this->branch?->name),
             'started_by_name' => $this->whenLoaded('startedByUser', fn () => $this->startedByUser?->name),
             'completed_by_name' => $this->whenLoaded('completedByUser', fn () => $this->completedByUser?->name),
             'applied_by_name' => $this->whenLoaded('appliedByUser', fn () => $this->appliedByUser?->name),

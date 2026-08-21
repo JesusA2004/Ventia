@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Pos\PosController;
+use App\Http\Controllers\Pos\PromotionPreviewController;
 use App\Http\Controllers\Pos\SaleController;
 use Illuminate\Support\Facades\Route;
 
@@ -8,6 +9,7 @@ Route::middleware(['auth', 'verified', 'active-company'])->group(function () {
     Route::get('pos', [PosController::class, 'index'])->name('pos.index');
     Route::get('pos/products/search', [PosController::class, 'searchProducts'])->name('pos.products.search');
     Route::get('pos/products/barcode', [PosController::class, 'lookupBarcode'])->name('pos.products.barcode');
+    Route::post('pos/promotions/preview', PromotionPreviewController::class)->name('pos.promotions.preview');
 
     Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
     Route::get('sales/suspended', [SaleController::class, 'suspended'])->name('sales.suspended');

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
-import type { Customer } from '@/types';
+import pos from '@/routes/pos';
+import type { Customer, PromotionEligibility } from '@/types';
 
 export type CartProduct = {
     id: number;
@@ -60,6 +61,16 @@ export const useCartStore = defineStore('pos-cart', () => {
         value: string;
     } | null>(null);
     const payments = ref<CartPayment[]>([]);
+    const couponCode = ref('');
+    /**
+     * Server-computed preview of the automatic promotion/coupon that would
+     * apply right now — see PromotionEligibilityService, the same class
+     * CreateSaleAction uses at checkout. Only a preview: refreshEligibility()
+     * must be re-called after every cart/customer/coupon change, and the
+     * backend always recalculates from scratch at checkout regardless.
+     */
+    const eligibility = ref<PromotionEligibility | null>(null);
+    const eligibilityLoading = ref(false);
     /**
      * The company the current cart belongs to. A superadministrator can
      * switch active company mid-session — restore() uses this to discard a
@@ -118,7 +129,9 @@ export const useCartStore = defineStore('pos-cart', () => {
         }
 
         const cappedQuantity =
-            !allowsNegativeStock && stock !== null && Number(quantity) > Number(stock)
+            !allowsNegativeStock &&
+            stock !== null &&
+            Number(quantity) > Number(stock)
                 ? stock
                 : quantity;
 
@@ -138,7 +151,11 @@ export const useCartStore = defineStore('pos-cart', () => {
             allows_negative_stock: allowsNegativeStock,
         });
 
-        if (!allowsNegativeStock && stock !== null && Number(quantity) > Number(stock)) {
+        if (
+            !allowsNegativeStock &&
+            stock !== null &&
+            Number(quantity) > Number(stock)
+        ) {
             return {
                 ok: false,
                 message: insufficientStockMessage({
@@ -205,6 +222,8 @@ export const useCartStore = defineStore('pos-cart', () => {
         notes.value = '';
         generalDiscount.value = null;
         payments.value = [];
+        couponCode.value = '';
+        eligibility.value = null;
     }
 
     function loadFromSuspended(
@@ -267,9 +286,91 @@ export const useCartStore = defineStore('pos-cart', () => {
             : Math.min(Number(generalDiscount.value.value), base);
     });
 
+    const estimatedRuleDiscount = computed(() => {
+        if (!eligibility.value) {
+            return 0;
+        }
+
+        return (
+            Number(eligibility.value.promotion?.discount_amount ?? 0) +
+            Number(eligibility.value.coupon?.discount_amount ?? 0)
+        );
+    });
+
     const estimatedTotal = computed(() =>
-        Math.max(0, estimatedSubtotal.value - estimatedGeneralDiscount.value),
+        Math.max(
+            0,
+            estimatedSubtotal.value -
+                estimatedGeneralDiscount.value -
+                estimatedRuleDiscount.value,
+        ),
     );
+
+    function csrfToken(): string {
+        return (
+            document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+                ?.content ?? ''
+        );
+    }
+
+    let eligibilityRequestId = 0;
+
+    /**
+     * @param branchId the POS session's branch — the cart store doesn't own
+     * this, so the caller (Pos/Index.vue) passes it on every cart/customer/
+     * coupon change via a debounced watcher.
+     */
+    async function refreshEligibility(branchId: number | null) {
+        if (!branchId || !customer.value || lines.value.length === 0) {
+            eligibility.value = null;
+
+            return;
+        }
+
+        const requestId = ++eligibilityRequestId;
+        eligibilityLoading.value = true;
+
+        try {
+            const response = await fetch(pos.promotions.preview.url(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+                body: JSON.stringify({
+                    branch_id: branchId,
+                    customer_id: customer.value.id,
+                    coupon_code: couponCode.value || null,
+                    items: lines.value.map((line) => ({
+                        product_id: line.product_id,
+                        product_variant_id: line.product_variant_id,
+                        quantity: line.quantity,
+                    })),
+                }),
+            });
+
+            // A slower earlier request resolving after a newer one would
+            // otherwise clobber it with stale data.
+            if (requestId !== eligibilityRequestId) {
+                return;
+            }
+
+            const payload = response.ok
+                ? ((await response.json()) as { data: PromotionEligibility })
+                : null;
+            eligibility.value = payload?.data ?? null;
+        } catch {
+            if (requestId === eligibilityRequestId) {
+                eligibility.value = null;
+            }
+        } finally {
+            if (requestId === eligibilityRequestId) {
+                eligibilityLoading.value = false;
+            }
+        }
+    }
 
     const itemCount = computed(() =>
         lines.value.reduce((sum, l) => sum + Number(l.quantity), 0),
@@ -364,9 +465,13 @@ export const useCartStore = defineStore('pos-cart', () => {
         notes,
         generalDiscount,
         payments,
+        couponCode,
+        eligibility,
+        eligibilityLoading,
         lineTotals,
         estimatedSubtotal,
         estimatedGeneralDiscount,
+        estimatedRuleDiscount,
         estimatedTotal,
         itemCount,
         paymentsTotal,
@@ -381,6 +486,7 @@ export const useCartStore = defineStore('pos-cart', () => {
         loadFromSuspended,
         addPayment,
         removePayment,
+        refreshEligibility,
         restore,
         clearPersisted,
     };

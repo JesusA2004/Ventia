@@ -6,5 +6,6 @@ export * from './inventory';
 export * from './models';
 export * from './navigation';
 export * from './pagination';
+export * from './promotions';
 export * from './sales';
 export * from './ui';

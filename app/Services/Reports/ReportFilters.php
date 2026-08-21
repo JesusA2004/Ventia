@@ -2,6 +2,7 @@
 
 namespace App\Services\Reports;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 
 /**
@@ -11,6 +12,15 @@ use Illuminate\Http\Request;
  * an error, since the Reportes screen only renders the filter controls that
  * make sense for the active tab. Built once in the controller and reused
  * identically by the screen, CSV, PDF and Excel exports.
+ *
+ * branchId/registerId/productId/categoryId/paymentMethodId/customerId are
+ * safe to trust as-is: every *ReportService applies them against tables that
+ * are themselves scoped to the active company (Sale, SaleItem, etc. via
+ * CompanyScope or accessibleBy()), so an ID belonging to another company
+ * simply matches zero rows there — it can't cross tenants. cashierId is the
+ * one exception: it filters against User, which has no CompanyScope (see
+ * app/Models/User.php), so it's validated against the active company here,
+ * at the single choke point every screen/export already funnels through.
  */
 final readonly class ReportFilters
 {
@@ -24,12 +34,18 @@ final readonly class ReportFilters
         public ?int $customerId = null,
     ) {}
 
-    public static function fromRequest(Request $request): self
+    public static function fromRequest(Request $request, ?int $activeCompanyId = null): self
     {
+        $cashierId = $request->integer('cashier_id') ?: null;
+
+        if ($cashierId !== null && ! User::query()->whereKey($cashierId)->where('company_id', $activeCompanyId)->exists()) {
+            $cashierId = null;
+        }
+
         return new self(
             branchId: $request->integer('branch_id') ?: null,
             registerId: $request->integer('register_id') ?: null,
-            cashierId: $request->integer('cashier_id') ?: null,
+            cashierId: $cashierId,
             productId: $request->integer('product_id') ?: null,
             categoryId: $request->integer('category_id') ?: null,
             paymentMethodId: $request->integer('payment_method_id') ?: null,

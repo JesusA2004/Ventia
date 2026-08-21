@@ -28,6 +28,7 @@ const emit = defineEmits<{
     'clear-requested': [];
     'change-customer': [];
     'edit-general-discount': [];
+    'edit-promotions': [];
 }>();
 
 const cart = useCartStore();
@@ -238,6 +239,41 @@ const canCheckout = computed(() => cart.lines.length > 0 && !props.processing);
                     >-{{ formatCurrency(cart.estimatedGeneralDiscount) }}</span
                 >
             </button>
+            <button
+                type="button"
+                class="flex w-full justify-between text-muted-foreground hover:text-foreground"
+                @click="emit('edit-promotions')"
+            >
+                <span>Promociones / cupón</span>
+                <span v-if="cart.estimatedRuleDiscount > 0"
+                    >-{{ formatCurrency(cart.estimatedRuleDiscount) }}</span
+                >
+                <span v-else>—</span>
+            </button>
+            <div
+                v-if="cart.eligibility?.promotion"
+                class="flex justify-between pl-2 text-xs text-muted-foreground"
+            >
+                <span>Promoción: {{ cart.eligibility.promotion.name }}</span>
+                <span
+                    >-{{
+                        formatCurrency(
+                            cart.eligibility.promotion.discount_amount,
+                        )
+                    }}</span
+                >
+            </div>
+            <div
+                v-if="cart.eligibility?.coupon"
+                class="flex justify-between pl-2 text-xs text-muted-foreground"
+            >
+                <span>Cupón: {{ cart.eligibility.coupon.code }}</span>
+                <span
+                    >-{{
+                        formatCurrency(cart.eligibility.coupon.discount_amount)
+                    }}</span
+                >
+            </div>
             <div class="flex justify-between text-base font-bold">
                 <span>Total estimado</span>
                 <span>{{ formatCurrency(cart.estimatedTotal) }}</span>
